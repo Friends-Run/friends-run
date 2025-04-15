@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "1026924805546",
+    "firebase_url": "https://friends-run-f4061-default-rtdb.firebaseio.com",
+    "project_id": "friends-run-f4061",
+    "storage_bucket": "friends-run-f4061.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1026924805546:android:0459ff2beb8da04763ffd3",
+        "android_client_info": {
+          "package_name": "com.example.friends_run"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1026924805546-m7fv91eolik00pk67mkr6m2ucsg0cjpl.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.friends_run",
+            "certificate_hash": "32de28894ed6f44f2edd451ca68d2aa82199d15b"
+          }
+        },
+        {
+          "client_id": "1026924805546-gopg0lgcc9nv364it09behslq1qg7nqe.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBaAcifvRCwuQLzBssiDM4ujlpUG_tojlo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1026924805546-gopg0lgcc9nv364it09behslq1qg7nqe.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1026924805546-9dndatcp136di2osfi9t7m10qaos7chl.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.friendsRun"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
