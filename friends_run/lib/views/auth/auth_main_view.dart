@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:friends_run/core/service/auth_service.dart';
+import 'package:friends_run/core/services/auth_service.dart';
 import 'package:friends_run/core/utils/colors.dart';
 import 'package:friends_run/views/auth/login_view.dart';
 import 'package:friends_run/views/auth/register_view.dart';
