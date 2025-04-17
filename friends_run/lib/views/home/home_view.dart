@@ -1,6 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:friends_run/core/service/auth_service.dart';
+import 'package:friends_run/core/services/auth_service.dart';
 import 'package:friends_run/core/utils/colors.dart';
 import 'package:friends_run/models/user/app_user.dart';
 import 'package:friends_run/views/auth/auth_main_view.dart';
