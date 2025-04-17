@@ -1,319 +1,343 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:friends_run/core/services/auth_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:friends_run/core/providers/race_provider.dart';
+import 'package:friends_run/core/providers/location_provider.dart';
 import 'package:friends_run/core/utils/colors.dart';
-import 'package:friends_run/models/user/app_user.dart';
-import 'package:friends_run/views/auth/auth_main_view.dart';
+import 'package:friends_run/views/home/widgets/empty_races.dart';
+import 'package:friends_run/views/home/widgets/home_drawer.dart';
+import 'package:friends_run/views/home/widgets/race_card.dart';
+import 'package:friends_run/views/home/widgets/races_error.dart';
+import 'package:friends_run/views/race/create_race/create_race_view.dart';
 
-class HomeView extends StatefulWidget {
+class HomeView extends ConsumerWidget {
   const HomeView({super.key});
 
   @override
-  State<HomeView> createState() => _HomeViewState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final displayedRacesAsync = ref.watch(displayedRacesProvider);
 
-class _HomeViewState extends State<HomeView> {
-  late final Future<AppUser?> _userFuture;
-  final AuthService _authService = AuthService();
-
-  @override
-  void initState() {
-    super.initState();
-    _userFuture = _loadUser();
-  }
-
-  Future<AppUser?> _loadUser() async {
-    try {
-      return await _authService.getCurrentUser();
-    } catch (e) {
-      debugPrint("Erro ao carregar usuário: $e");
-      return null;
-    }
-  }
-
-  Future<void> _logout(BuildContext context) async {
-    try {
-      await _authService.logout();
-      if (mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const AuthMainView()),
-          (route) => false,
-        );
+    ref.listen<RaceActionState>(raceNotifierProvider, (_, next) {
+      if (next.error != null && next.error!.isNotEmpty) {
+        if (ScaffoldMessenger.maybeOf(context) != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(next.error!),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+          ref.read(raceNotifierProvider.notifier).clearError();
+        }
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao fazer logout: ${e.toString()}')),
-        );
-      }
-    }
-  }
+    });
 
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
+      drawer: const HomeDrawer(),
       appBar: AppBar(
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu, color: AppColors.white),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
         title: const Text(
-          "Meu Perfil",
+          'Corridas Próximas',
           style: TextStyle(color: AppColors.white),
         ),
         backgroundColor: AppColors.background,
-        automaticallyImplyLeading: false,
+        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout, color: AppColors.white),
-            tooltip: 'Sair',
-            onPressed: () => _logout(context),
+            icon: const Icon(Icons.tune, color: AppColors.white),
+            tooltip: "Ajustar Raio de Busca",
+            onPressed: () => _showRadiusSliderBottomSheet(context, ref),
           ),
         ],
       ),
-      body: FutureBuilder<AppUser?>(
-        future: _userFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError || snapshot.data == null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, color: Colors.red, size: 50),
-                  const SizedBox(height: 16),
-                  const Text(
-                    "Erro ao carregar perfil",
-                    style: TextStyle(color: AppColors.white, fontSize: 20),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryRed,
-                      foregroundColor: AppColors.white,
+      body: Column(
+        children: [
+          const _BuildFilterSortControls(),
+          Expanded(
+            child: RefreshIndicator(
+              color: AppColors.primaryRed,
+              backgroundColor: AppColors.underBackground,
+              onRefresh: () async {
+                ref.invalidate(currentLocationProvider);
+                await Future.delayed(const Duration(milliseconds: 100));
+              },
+              child: displayedRacesAsync.when(
+                data: (races) {
+                  if (races.isEmpty) return const EmptyRacesMessage();
+                  return ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(
+                      parent: BouncingScrollPhysics(),
                     ),
-                    onPressed:
-                        () => setState(() {
-                          _userFuture = _loadUser();
-                        }),
-                    child: const Text("Tentar novamente"),
+                    padding: const EdgeInsets.only(top: 0, bottom: 80),
+                    itemCount: races.length,
+                    itemBuilder: (context, index) => RaceCard(race: races[index]),
+                  );
+                },
+                loading: () => const Center(
+                  child: CircularProgressIndicator(color: AppColors.primaryRed),
+                ),
+                error: (error, stackTrace) {
+                  print("Erro em displayedRacesProvider: $error\n$stackTrace");
+                  return RacesErrorWidget(
+                    error: error,
+                    onRetry: () => ref.invalidate(currentLocationProvider),
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+      floatingActionButton: _buildFAB(context),
+    );
+  }
+
+  void _showRadiusSliderBottomSheet(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.underBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return Consumer(
+          builder: (context, sheetRef, child) {
+            final distanceRadiusNotifier = ref.read(distanceRadiusProvider.notifier);
+            final currentRadius = sheetRef.watch(distanceRadiusProvider);
+
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Ajustar Raio de Busca',
+                        style: TextStyle(
+                          color: AppColors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: AppColors.greyLight),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 15),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.radar_outlined,
+                        color: AppColors.primaryRed,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Slider(
+                          value: currentRadius,
+                          min: 1.0,
+                          max: 100.0,
+                          divisions: 99,
+                          activeColor: AppColors.primaryRed,
+                          inactiveColor: AppColors.greyDark,
+                          label: '${currentRadius.round()} km',
+                          onChanged: (value) {
+                            distanceRadiusNotifier.state = value;
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      SizedBox(
+                        width: 55,
+                        child: Text(
+                          '${currentRadius.toStringAsFixed(0)} km',
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                            color: AppColors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
                 ],
               ),
             );
-          }
+          },
+        );
+      },
+    );
+  }
 
-          final user = snapshot.data!;
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                // Cabeçalho com foto e nome
-                _buildProfileHeader(user),
-                const SizedBox(height: 30),
+  Widget _buildFAB(BuildContext context) {
+    return FloatingActionButton.extended(
+      backgroundColor: AppColors.primaryRed,
+      foregroundColor: AppColors.white,
+      icon: const Icon(Icons.add_location_alt),
+      label: const Text('Criar Corrida'),
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const CreateRaceView()),
+        );
+      },
+    );
+  }
+}
 
-                // Seção de informações
-                _buildUserInfoSection(user),
-                const SizedBox(height: 30),
+class _BuildFilterSortControls extends ConsumerWidget {
+  const _BuildFilterSortControls();
 
-                // Estatísticas (pode adicionar mais)
-                _buildStatsSection(),
-                const SizedBox(height: 30),
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentFilter = ref.watch(raceFilterProvider);
+    final currentSortCriteria = ref.watch(raceSortCriteriaProvider);
+    final isAscending = ref.watch(sortAscendingProvider);
 
-                // Configurações
-                _buildSettingsSection(context),
-              ],
-            ),
-          );
-        },
+    final dropdownStyle = TextStyle(
+      color: AppColors.white,
+      fontSize: 14,
+      fontWeight: FontWeight.w500,
+    );
+    final dropdownIconColor = AppColors.greyLight;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.underBackground,
+        borderRadius: BorderRadius.circular(12),
       ),
-    );
-  }
-
-  Widget _buildProfileHeader(AppUser user) {
-    return Column(
-      children: [
-        CircleAvatar(
-          radius: 60,
-          backgroundColor: AppColors.primaryRed.withOpacity(0.2),
-          child: ClipOval(
-            child: CachedNetworkImage(
-              imageUrl:
-                  user.profileImageUrl ?? 'assets/images/default_profile.png',
-              placeholder: (context, url) => const CircularProgressIndicator(),
-              errorWidget:
-                  (context, url, error) => const Icon(Icons.person, size: 60),
-              width: 110,
-              height: 110,
-              fit: BoxFit.cover,
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          user.name,
-          style: const TextStyle(
-            color: AppColors.white,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        if (user.email.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              user.email,
-              style: TextStyle(
-                color: AppColors.white.withOpacity(0.7),
-                fontSize: 16,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildUserInfoSection(AppUser user) {
-    return Card(
-      color: AppColors.background,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _buildInfoTile(Icons.person, "Nome completo", user.name),
-            if (user.email.isNotEmpty)
-              _buildInfoTile(Icons.email, "E-mail", user.email),
-            // Adicione mais campos do usuário conforme necessário
-            // Exemplo:
-            // if (user.phone != null) _buildInfoTile(Icons.phone, "Telefone", user.phone!),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoTile(IconData icon, String title, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: AppColors.primaryRed, size: 28),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: AppColors.white.withOpacity(0.6),
-                    fontSize: 14,
-                  ),
+          Row(
+            children: [
+              const Padding(
+                padding: EdgeInsets.only(right: 8.0),
+                child: Icon(
+                  Icons.filter_alt_outlined,
+                  size: 20,
+                  color: AppColors.primaryRed,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    color: AppColors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
+              ),
+              Expanded(
+                child: _buildDropdown<RaceFilterOption>(
+                  context: context,
+                  value: currentFilter,
+                  items: RaceFilterOption.values,
+                  label: 'Filtrar por',
+                  style: dropdownStyle,
+                  iconColor: dropdownIconColor,
+                  onChanged: (value) {
+                    if (value != null) {
+                      ref.read(raceFilterProvider.notifier).state = value;
+                    }
+                  },
+                  itemBuilder: (filter) {
+                    switch (filter) {
+                      case RaceFilterOption.publicas: return 'Públicas';
+                      case RaceFilterOption.privadas: return 'Privadas';
+                      case RaceFilterOption.todas: default: return 'Todas';
+                    }
+                  },
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 16),
+              const Padding(
+                padding: EdgeInsets.only(right: 8.0),
+                child: Icon(
+                  Icons.sort_outlined,
+                  size: 20,
+                  color: AppColors.primaryRed,
+                ),
+              ),
+              Expanded(
+                child: _buildDropdown<RaceSortCriteria>(
+                  context: context,
+                  value: currentSortCriteria,
+                  items: RaceSortCriteria.values,
+                  label: 'Ordenar por',
+                  style: dropdownStyle,
+                  iconColor: dropdownIconColor,
+                  onChanged: (value) {
+                    if (value != null) {
+                      ref.read(raceSortCriteriaProvider.notifier).state = value;
+                    }
+                  },
+                  itemBuilder: (sort) {
+                    switch (sort) {
+                      case RaceSortCriteria.proximidade: return 'Proximidade';
+                      case RaceSortCriteria.distancia: return 'Distância';
+                      case RaceSortCriteria.data: return 'Data';
+                    }
+                  },
+                ),
+              ),
+              IconButton(
+                icon: Icon(
+                  isAscending ? Icons.arrow_upward : Icons.arrow_downward,
+                  color: AppColors.white,
+                  size: 20,
+                ),
+                tooltip: isAscending ? "Ordem Crescente" : "Ordem Decrescente",
+                padding: const EdgeInsets.all(4),
+                constraints: const BoxConstraints(),
+                onPressed: () {
+                  ref.read(sortAscendingProvider.notifier).update((state) => !state);
+                },
+              )
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildStatsSection() {
-    return Card(
-      color: AppColors.background,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            const Text(
-              "Minhas Estatísticas",
-              style: TextStyle(
-                color: AppColors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildStatItem("12", "Corridas"),
-                _buildStatItem("42 km", "Distância"),
-                _buildStatItem("05:20", "Melhor tempo"),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatItem(String value, String label) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            color: AppColors.primaryRed,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
+  Widget _buildDropdown<T>({
+    required BuildContext context,
+    required T value,
+    required List<T> items,
+    required String label,
+    required TextStyle style,
+    required Color iconColor,
+    required ValueChanged<T?> onChanged,
+    required String Function(T) itemBuilder,
+  }) {
+    return DropdownButtonHideUnderline(
+      child: DropdownButton<T>(
+        value: value,
+        isExpanded: true,
+        dropdownColor: AppColors.underBackground,
+        iconEnabledColor: iconColor,
+        style: style,
+        hint: Text(
           label,
-          style: TextStyle(
-            color: AppColors.white.withOpacity(0.7),
-            fontSize: 14,
-          ),
+          style: style.copyWith(color: AppColors.greyLight.withOpacity(0.7)),
         ),
-      ],
-    );
-  }
-
-  Widget _buildSettingsSection(BuildContext context) {
-    return Column(
-      children: [
-        ListTile(
-          leading: const Icon(Icons.edit, color: AppColors.primaryRed),
-          title: const Text(
-            "Editar perfil",
-            style: TextStyle(color: AppColors.white),
-          ),
-          onTap: () {
-            // Navegar para tela de edição de perfil
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.settings, color: AppColors.primaryRed),
-          title: const Text(
-            "Configurações",
-            style: TextStyle(color: AppColors.white),
-          ),
-          onTap: () {
-            // Navegar para tela de configurações
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.help, color: AppColors.primaryRed),
-          title: const Text("Ajuda", style: TextStyle(color: AppColors.white)),
-          onTap: () {
-            // Navegar para tela de ajuda
-          },
-        ),
-      ],
+        items: items.map((item) {
+          return DropdownMenuItem(
+            value: item,
+            child: Text(
+              itemBuilder(item),
+              overflow: TextOverflow.ellipsis,
+              style: style,
+            ),
+          );
+        }).toList(),
+        onChanged: onChanged,
+      ),
     );
   }
 }

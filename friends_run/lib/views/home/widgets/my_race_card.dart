@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:friends_run/core/providers/auth_provider.dart';
 import 'package:friends_run/core/providers/location_provider.dart'
-hide nearbyRacesProvider;
+    hide nearbyRacesProvider; // Esconder se não usar nearbyRacesProvider
 import 'package:friends_run/core/providers/race_provider.dart';
 import 'package:friends_run/core/utils/colors.dart';
 import 'package:friends_run/models/race/race_model.dart';

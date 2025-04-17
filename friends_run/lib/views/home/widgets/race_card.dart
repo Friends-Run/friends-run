@@ -292,37 +292,37 @@ class RaceCard extends ConsumerWidget {
                      width: double.infinity,
                      child: ElevatedButton(
                        style: ButtonStyle(
-                          padding: MaterialStateProperty.all(const EdgeInsets.symmetric(vertical: 12)),
-                          shape: MaterialStateProperty.all(
+                          padding: WidgetStateProperty.all(const EdgeInsets.symmetric(vertical: 12)),
+                          shape: WidgetStateProperty.all(
                             RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           ),
-                          backgroundColor: MaterialStateProperty.resolveWith<Color?>(
-                            (Set<MaterialState> states) {
-                              if (states.contains(MaterialState.disabled)) {
+                          backgroundColor: WidgetStateProperty.resolveWith<Color?>(
+                            (Set<WidgetState> states) {
+                              if (states.contains(WidgetState.disabled)) {
                                 return AppColors.greyLight.withAlpha(150);
                               }
                               return AppColors.primaryRed;
                             },
                           ),
-                          foregroundColor: MaterialStateProperty.resolveWith<Color?>(
-                            (Set<MaterialState> states) {
-                              if (states.contains(MaterialState.disabled)) {
+                          foregroundColor: WidgetStateProperty.resolveWith<Color?>(
+                            (Set<WidgetState> states) {
+                              if (states.contains(WidgetState.disabled)) {
                                 return AppColors.background.withAlpha(180);
                               }
                               return AppColors.white;
                             },
                           ),
-                          overlayColor: MaterialStateProperty.resolveWith<Color?>(
-                            (Set<MaterialState> states) {
-                              if (states.contains(MaterialState.pressed)) {
+                          overlayColor: WidgetStateProperty.resolveWith<Color?>(
+                            (Set<WidgetState> states) {
+                              if (states.contains(WidgetState.pressed)) {
                                 return AppColors.white.withOpacity(0.1);
                               }
                               return null;
                             },
                           ),
-                          elevation: MaterialStateProperty.resolveWith<double?>(
-                             (Set<MaterialState> states) {
-                                if (states.contains(MaterialState.disabled)) return 0;
+                          elevation: WidgetStateProperty.resolveWith<double?>(
+                             (Set<WidgetState> states) {
+                                if (states.contains(WidgetState.disabled)) return 0;
                                 return 2;
                              },
                            ),
