@@ -66,7 +66,7 @@ class Race {
   String get formattedDate {
      try {
        // Adapte o formato 'pt_BR' ou outro conforme necessário
-       final formatter = DateFormat('dd/MM/yyyy - HH:mm', 'pt_BR');
+       final formatter = DateFormat('dd/MM/yyyy - HH:mm');
        return formatter.format(date);
      } catch (e) {
        print("Erro ao formatar data: $e");
