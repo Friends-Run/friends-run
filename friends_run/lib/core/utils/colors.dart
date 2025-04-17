@@ -9,6 +9,8 @@ class AppColors {
   static const Color greyDark = Color(0xFF616161); // Cinza Médio para contraste
   static const Color black = Color(0xFF1E1E1E); // Preto Ajustado para elementos escuros
   static const Color shadowColor = Color(0x29000000); // Sombra suave
+  static const Color btnGreen = Color(0xFF4CAF50);
+  static const Color btnGreenStrong = Color.fromARGB(255, 83, 233, 88); // Vermelho para botões de erro ou alerta
 
   // Adicionei este só para referência, caso precise de um cinza mais claro que o greyLight
   static const Color greyLighter = Color(0xFFBDBDBD);
