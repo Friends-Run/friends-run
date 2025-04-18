@@ -152,9 +152,6 @@ class GroupService {
       print("[GroupService] Usuário $userId solicitando entrada no grupo $groupId");
       
       final groupDoc = await _firestore.collection(_collectionName).doc(groupId).get();
-      if (!(groupDoc.exists && groupDoc.data()?['isPublic'] == true)) {
-        throw Exception("Este grupo não é público ou não existe.");
-      }
 
       final groupData = groupDoc.data()!;
       if (List<String>.from(groupData['memberIds'] ?? []).contains(userId) || 
@@ -236,6 +233,7 @@ class GroupService {
     bool? newIsPublic,
     File? newImage,
     bool removeImage = false,
+    bool clearPending = false,
   }) async {
     print("[GroupService] Atualizando grupo $groupId");
     try {
@@ -257,6 +255,11 @@ class GroupService {
       } else if (newImage != null) {
         final imageUrl = await FirebaseStorageService.uploadGroupImage(groupId, newImage);
         dataToUpdate['imageUrl'] = imageUrl;
+      }
+
+      if (clearPending) {
+         print("[GroupService] Marcado para limpar solicitações pendentes.");
+         dataToUpdate['pendingMemberIds'] = []; // Define como array vazio
       }
 
       if (dataToUpdate.length > 1) {
