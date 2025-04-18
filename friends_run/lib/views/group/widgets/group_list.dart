@@ -10,7 +10,7 @@ class GroupList extends StatelessWidget {
   const GroupList({
     required this.groups,
     required this.showAllGroups, // Requer o parâmetro
-    super.key
+    super.key,
   });
   // --------------------
 
@@ -22,8 +22,8 @@ class GroupList extends StatelessWidget {
       itemBuilder: (context, index) {
         // --- PASSA O PARÂMETRO PARA O ITEM ---
         return GroupListItem(
-            group: groups[index],
-            showAllGroups: showAllGroups, // Repassa o valor recebido
+          group: groups[index],
+          showAllGroups: showAllGroups, // Repassa o valor recebido
         );
         // ------------------------------------
       },

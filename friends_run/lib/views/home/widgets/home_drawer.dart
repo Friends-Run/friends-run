@@ -5,6 +5,7 @@ import 'package:friends_run/core/providers/auth_provider.dart';
 import 'package:friends_run/core/utils/colors.dart';
 import 'package:friends_run/views/auth/auth_main_view.dart';
 import 'package:friends_run/views/group/groups_list_view.dart';
+import 'package:friends_run/views/home/home_view.dart';
 import 'package:friends_run/views/profile/my_races_view.dart';
 import 'package:friends_run/views/profile/profile_view.dart';
 
@@ -109,6 +110,17 @@ class HomeDrawer extends ConsumerWidget {
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
+                _buildDrawerItem(
+                  icon: Icons.home, 
+                  title: 'Home', 
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => HomeView()),
+                    );
+                  },
+                ),
                 _buildDrawerItem(
                   icon: Icons.person,
                   title: 'Meu Perfil',

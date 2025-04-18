@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:friends_run/core/providers/race_provider.dart';
 import 'package:friends_run/models/group/race_group.dart';
 import 'package:friends_run/core/providers/auth_provider.dart';
 import 'package:friends_run/core/providers/group_provider.dart';
@@ -87,64 +88,114 @@ class GroupListItem extends ConsumerWidget {
   });
 
   Widget _buildActionWidget(BuildContext context, WidgetRef ref, String? currentUserId) {
+    // Se não for a lista de exploração ou usuário deslogado, mostra só a seta
     if (!showAllGroups || currentUserId == null) {
       return const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.greyLight);
     }
 
+    // Verifica o status do usuário em relação ao grupo
     final bool isAdmin = group.adminId == currentUserId;
     final bool isMember = group.memberIds.contains(currentUserId);
     final bool isPending = group.pendingMemberIds.contains(currentUserId);
+    // Verifica se alguma ação de grupo/corrida está em andamento
+    final bool isLoadingAction = ref.watch(raceNotifierProvider).isLoading;
 
+    // Se for admin ou membro, mostra apenas a seta para detalhes
     if (isAdmin || isMember) {
       return const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.greyLight);
-    } else if (isPending) {
+    }
+    // Se a solicitação está pendente
+    else if (isPending) {
       return Chip(
         label: const Text("Solicitado", style: TextStyle(fontSize: 11, color: AppColors.white)),
         backgroundColor: AppColors.greyDark,
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         visualDensity: VisualDensity.compact,
       );
-    } else {
+    }
+    // Se for visitante (não admin, não membro, não pendente)
+    else {
       if (group.isPublic) {
+        // Botão para ENTRAR DIRETAMENTE em grupo público
         return SizedBox(
           height: 30,
-          child: ElevatedButton(
-            onPressed: () async {
+          child: ElevatedButton.icon(
+            icon: const Icon(Icons.group_add_outlined, size: 16),
+            label: const Text("Entrar"),
+            onPressed: isLoadingAction ? null : () async {
               try {
-                await ref.read(groupServiceProvider).requestToJoinGroup(group.id, currentUserId);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Solicitação enviada!'), 
-                    backgroundColor: Colors.orangeAccent
-                  )
-                );
+                await ref.read(groupServiceProvider).joinPublicGroup(group.id, currentUserId);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Você entrou no grupo "${group.name}"!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+                // Invalida providers para atualizar a UI
+                ref.invalidate(userGroupsProvider);
+                ref.invalidate(allGroupsProvider);
                 ref.invalidate(groupDetailsProvider(group.id));
               } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Erro ao solicitar: ${e.toString().replaceFirst("Exception: ", "")}'), 
-                    backgroundColor: Colors.redAccent
-                  )
-                );
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Erro ao entrar: ${e.toString().replaceFirst("Exception: ", "")}'),
+                      backgroundColor: Colors.redAccent,
+                    ),
+                  );
+                }
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryRed.withAlpha(200),
+              backgroundColor: AppColors.primaryRed,
               foregroundColor: AppColors.white,
               padding: const EdgeInsets.symmetric(horizontal: 10),
               textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
             ),
-            child: const Text("Solicitar"),
           ),
         );
       } else {
-        return const Chip(
-          label: Text("Privado", style: TextStyle(fontSize: 11, color: AppColors.greyLight)),
-          backgroundColor: AppColors.underBackground,
-          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          visualDensity: VisualDensity.compact,
-          side: BorderSide(color: AppColors.greyDark),
+        // Botão para SOLICITAR ENTRADA em grupo privado
+        return SizedBox(
+          height: 30,
+          child: ElevatedButton.icon(
+            icon: const Icon(Icons.vpn_key_outlined, size: 16),
+            label: const Text("Solicitar"),
+            onPressed: isLoadingAction ? null : () async {
+              try {
+                await ref.read(groupServiceProvider).requestToJoinGroup(group.id, currentUserId);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Solicitação enviada!'),
+                      backgroundColor: Colors.orangeAccent,
+                    ),
+                  );
+                }
+                ref.invalidate(allGroupsProvider);
+                ref.invalidate(groupDetailsProvider(group.id));
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Erro ao solicitar: ${e.toString().replaceFirst("Exception: ", "")}'),
+                      backgroundColor: Colors.redAccent,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange.shade800,
+              foregroundColor: AppColors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+            ),
+          ),
         );
       }
     }

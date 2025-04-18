@@ -1,12 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 
 // Models e Providers
 import 'package:friends_run/models/race/race_model.dart';
 import 'package:friends_run/models/group/race_group.dart';
-// Adicionado do novo código
 import 'package:friends_run/core/providers/race_provider.dart';
 import 'package:friends_run/core/providers/auth_provider.dart';
 import 'package:friends_run/core/providers/group_provider.dart';
@@ -14,15 +12,21 @@ import 'package:friends_run/core/providers/group_provider.dart';
 // Utils e Widgets
 import 'package:friends_run/core/utils/colors.dart';
 import 'package:friends_run/views/home/widgets/race_card.dart';
+// --- IMPORTE OS WIDGETS EXTRAÍDOS ---
+import 'package:friends_run/views/group/widgets/member_list_item.dart';
+import 'package:friends_run/views/group/widgets/pending_member_item.dart';
+// Importe a nova tela de gerenciamento
+import 'package:friends_run/views/group/group_management_view.dart';
+// -----------------------------------
 
 // Provider para buscar as corridas de um grupo específico (igual)
 final groupRacesProvider = StreamProvider.autoDispose
     .family<List<Race>, String>((ref, groupId) {
-      if (groupId.isEmpty) return Stream.value([]);
-      final raceService = ref.watch(raceServiceProvider);
-      // Garanta que getRacesByGroup existe no RaceService
-      return raceService.getRacesByGroup(groupId);
-    });
+  if (groupId.isEmpty) return Stream.value([]);
+  final raceService = ref.watch(raceServiceProvider);
+  // Garanta que getRacesByGroup existe no RaceService
+  return raceService.getRacesByGroup(groupId);
+});
 
 class GroupDetailsView extends ConsumerWidget {
   final String groupId;
@@ -30,6 +34,7 @@ class GroupDetailsView extends ConsumerWidget {
 
   // --- Helpers de Construção da UI ---
 
+  // Helper _buildInfoRow (sem alterações do código original)
   Widget _buildInfoRow(
     BuildContext context,
     IconData icon,
@@ -64,327 +69,24 @@ class GroupDetailsView extends ConsumerWidget {
     );
   }
 
-  Widget _buildMemberItem(
-    BuildContext context,
-    WidgetRef ref,
-    String userId,
-    String adminId,
-  ) {
-    final userAsync = ref.watch(userProvider(userId));
-    return userAsync.when(
-      data: (user) {
-        if (user == null)
-          return const ListTile(
-            dense: true,
-            leading: CircleAvatar(
-              radius: 18,
-              backgroundColor: AppColors.greyDark,
-            ),
-            title: Text(
-              'Usuário não encontrado',
-              style: TextStyle(
-                color: AppColors.greyLight,
-                fontStyle: FontStyle.italic,
-                fontSize: 14,
-              ),
-            ),
-          );
+  // Helper _buildMapView (Mencionado no novo código, mas sem implementação fornecida - adicione se necessário)
+  // Widget _buildMapView(Race race) { /* ... Implementação do Mapa ... */ }
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 5.0),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: AppColors.greyDark,
-                backgroundImage:
-                    (user.profileImageUrl != null &&
-                            user.profileImageUrl!.isNotEmpty)
-                        ? CachedNetworkImageProvider(user.profileImageUrl!)
-                        : null,
-                child:
-                    (user.profileImageUrl == null ||
-                            user.profileImageUrl!.isEmpty)
-                        ? const Icon(
-                          Icons.person,
-                          size: 18,
-                          color: AppColors.greyLight,
-                        )
-                        : null,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  user.name.isNotEmpty ? user.name : 'Usuário Anônimo',
-                  style: const TextStyle(
-                    color: AppColors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (user.uid == adminId)
-                Tooltip(
-                  message: "Admin",
-                  child: Icon(
-                    Icons.shield_outlined,
-                    size: 18,
-                    color: AppColors.primaryRed.withOpacity(0.8),
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
-      loading:
-          () => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 9.0),
-            child: Row(
-              children: [
-                const CircleAvatar(
-                  radius: 18,
-                  backgroundColor: AppColors.greyDark,
-                ),
-                const SizedBox(width: 12),
-                Container(
-                  height: 10,
-                  width: 100,
-                  color: AppColors.greyDark.withOpacity(0.5),
-                ),
-              ],
-            ),
-          ),
-      error:
-          (e, s) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 5.0),
-            child: Row(
-              children: [
-                const CircleAvatar(
-                  radius: 18,
-                  backgroundColor: Colors.redAccent,
-                  child: Icon(
-                    Icons.error_outline,
-                    size: 18,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                const Text(
-                  'Erro',
-                  style: TextStyle(color: Colors.redAccent, fontSize: 14),
-                ),
-              ],
-            ),
-          ),
-    );
-  }
+  // --- _buildMemberItem e _buildPendingItem FORAM REMOVIDOS DAQUI ---
+  // A lógica agora está em MemberListItem e PendingMemberItem
 
-  Widget _buildPendingItem(
-    BuildContext context,
-    WidgetRef ref,
-    String pendingUserId,
-    RaceGroup group,
-  ) {
-    final bool isLoadingAction = ref.watch(raceNotifierProvider).isLoading;
-    final userAsync = ref.watch(userProvider(pendingUserId));
-
-    return userAsync.when(
-      data: (user) {
-        if (user == null) {
-          return const ListTile(
-            dense: true,
-            leading: CircleAvatar(
-              radius: 18,
-              backgroundColor: AppColors.greyDark,
-            ),
-            title: Text(
-              'Usuário pendente não encontrado',
-              style: TextStyle(
-                color: AppColors.greyLight,
-                fontStyle: FontStyle.italic,
-                fontSize: 14,
-              ),
-            ),
-          );
-        }
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 5.0),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: AppColors.greyDark,
-                backgroundImage:
-                    (user.profileImageUrl != null &&
-                            user.profileImageUrl!.isNotEmpty)
-                        ? CachedNetworkImageProvider(user.profileImageUrl!)
-                        : null,
-                child:
-                    (user.profileImageUrl == null ||
-                            user.profileImageUrl!.isEmpty)
-                        ? const Icon(
-                          Icons.person_outline,
-                          size: 18,
-                          color: AppColors.greyLight,
-                        )
-                        : null,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  user.name.isNotEmpty ? user.name : 'Usuário Anônimo',
-                  style: const TextStyle(
-                    color: AppColors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              SizedBox(
-                width: 36,
-                height: 36,
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.check_circle_outline,
-                    color: Colors.greenAccent,
-                  ),
-                  iconSize: 22,
-                  tooltip: "Aprovar",
-                  padding: EdgeInsets.zero,
-                  onPressed:
-                      isLoadingAction
-                          ? null
-                          : () async {
-                            try {
-                              await ref
-                                  .read(groupServiceProvider)
-                                  .approveMember(group.id, pendingUserId);
-                              if (context.mounted)
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('${user.name} aprovado(a)!'),
-                                    backgroundColor: Colors.green,
-                                  ),
-                                );
-                              ref.invalidate(groupDetailsProvider(group.id));
-                            } catch (e) {
-                              if (context.mounted)
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      "Erro ao aprovar: ${e.toString().replaceFirst("Exception: ", "")}",
-                                    ),
-                                    backgroundColor: Colors.redAccent,
-                                  ),
-                                );
-                            }
-                          },
-                ),
-              ),
-              const SizedBox(width: 4),
-              SizedBox(
-                width: 36,
-                height: 36,
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.cancel_outlined,
-                    color: Colors.redAccent,
-                  ),
-                  iconSize: 22,
-                  tooltip: "Rejeitar",
-                  padding: EdgeInsets.zero,
-                  onPressed:
-                      isLoadingAction
-                          ? null
-                          : () async {
-                            try {
-                              await ref
-                                  .read(groupServiceProvider)
-                                  .removeOrRejectMember(
-                                    group.id,
-                                    pendingUserId,
-                                    isPending: true,
-                                  );
-                              if (context.mounted)
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Solicitação de ${user.name} rejeitada.',
-                                    ),
-                                    backgroundColor: Colors.orange,
-                                  ),
-                                );
-                              ref.invalidate(groupDetailsProvider(group.id));
-                            } catch (e) {
-                              if (context.mounted)
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      "Erro ao rejeitar: ${e.toString().replaceFirst("Exception: ", "")}",
-                                    ),
-                                    backgroundColor: Colors.redAccent,
-                                  ),
-                                );
-                            }
-                          },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-      loading:
-          () => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 9.0),
-            child: Row(
-              children: [
-                const CircleAvatar(
-                  radius: 18,
-                  backgroundColor: AppColors.greyDark,
-                ),
-                const SizedBox(width: 12),
-                Container(
-                  height: 10,
-                  width: 100,
-                  color: AppColors.greyDark.withOpacity(0.5),
-                ),
-              ],
-            ),
-          ),
-      error:
-          (err, stack) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 5.0),
-            child: Row(
-              children: [
-                const CircleAvatar(
-                  radius: 18,
-                  backgroundColor: Colors.redAccent,
-                  child: Icon(
-                    Icons.error_outline,
-                    size: 18,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                const Text(
-                  'Erro',
-                  style: TextStyle(color: Colors.redAccent, fontSize: 14),
-                ),
-              ],
-            ),
-          ),
-    );
-  }
-
+  // Helper para o botão de Ação do Grupo (MODIFICADO)
   Widget _buildGroupActionButton(
     BuildContext context,
     WidgetRef ref,
     RaceGroup group,
   ) {
     final currentUserAsync = ref.watch(currentUserProvider);
-    final bool isLoadingAction = ref.watch(raceNotifierProvider).isLoading;
+    // Nota: a dependência de raceNotifierProvider para isLoadingAction
+    // pode ser revista se as ações do grupo (join/leave/request)
+    // tiverem seu próprio estado de loading no groupNotifierProvider.
+    // Por enquanto, mantive como no código original.
+    final bool isLoadingAction = ref.watch(raceNotifierProvider).isLoading; // Ou groupNotifierProvider.isLoading
 
     return currentUserAsync.when(
       data: (currentUser) {
@@ -423,15 +125,21 @@ class GroupDetailsView extends ConsumerWidget {
         bool canInteract = false;
 
         if (isAdmin) {
-          buttonText = "Gerenciar";
+          // --- MODIFICAÇÃO AQUI ---
+          buttonText = "Gerenciar Grupo"; // Texto atualizado
           buttonIcon = Icons.settings;
-          buttonColor = AppColors.primaryRed;
+          buttonColor = AppColors.primaryRed; // Cor para ação principal de admin
           onPressed = () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Tela de gerenciamento (TODO)")),
+            // Navega para a tela de Gerenciamento
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => GroupManagementView(groupId: group.id),
+              ),
             );
           };
           canInteract = true;
+          // --- FIM DA MODIFICAÇÃO ---
         } else if (isMember) {
           buttonText = "Sair do Grupo";
           buttonColor = Colors.redAccent.shade700;
@@ -439,29 +147,28 @@ class GroupDetailsView extends ConsumerWidget {
           onPressed = () async {
             bool? confirm = await showDialog<bool>(
               context: context,
-              builder:
-                  (ctx) => AlertDialog(
-                    title: const Text("Confirmar Saída"),
-                    content: Text(
-                      "Tem certeza que deseja sair do grupo \"${group.name}\"?",
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx, false),
-                        child: const Text("Cancelar"),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx, true),
-                        child: const Text(
-                          "Sair",
-                          style: TextStyle(color: Colors.red),
-                        ),
-                      ),
-                    ],
+              builder: (ctx) => AlertDialog(
+                title: const Text("Confirmar Saída"),
+                content: Text(
+                    "Tem certeza que deseja sair do grupo \"${group.name}\"?"),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text("Cancelar"),
                   ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: const Text(
+                      "Sair",
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ),
+                ],
+              ),
             );
             if (confirm == true && context.mounted) {
               try {
+                // Usando groupServiceProvider que foi importado
                 await ref
                     .read(groupServiceProvider)
                     .leaveGroup(group.id, currentUserId);
@@ -473,6 +180,8 @@ class GroupDetailsView extends ConsumerWidget {
                 );
                 ref.invalidate(userGroupsProvider);
                 ref.invalidate(groupDetailsProvider(group.id));
+                // Pode ser útil invalidar a lista geral também se aplicável
+                // ref.invalidate(allGroupsProvider);
               } catch (e) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -489,13 +198,17 @@ class GroupDetailsView extends ConsumerWidget {
         } else if (isPending) {
           buttonText = "Solicitação Enviada";
           buttonIcon = Icons.hourglass_top;
+          // Nenhuma ação direta aqui, o botão fica desabilitado
+          canInteract = false; // Explicitamente false
         } else {
+          // Não é admin, não é membro, não está pendente
           if (group.isPublic) {
             buttonText = "Entrar no Grupo";
             buttonColor = AppColors.primaryRed;
             buttonIcon = Icons.group_add_outlined;
             onPressed = () async {
               try {
+                 // Usando groupServiceProvider que foi importado
                 await ref
                     .read(groupServiceProvider)
                     .joinPublicGroup(group.id, currentUserId);
@@ -508,12 +221,14 @@ class GroupDetailsView extends ConsumerWidget {
                   );
                 ref.invalidate(userGroupsProvider);
                 ref.invalidate(groupDetailsProvider(group.id));
-                ref.invalidate(allGroupsProvider);
+                ref.invalidate(allGroupsProvider); // Invalida lista geral
               } catch (e) {
                 if (context.mounted)
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text("Erro ao entrar no grupo: ${e.toString()}"),
+                      content: Text(
+                        "Erro ao entrar no grupo: ${e.toString().replaceFirst("Exception: ", "")}",
+                      ),
                       backgroundColor: Colors.redAccent,
                     ),
                   );
@@ -521,11 +236,13 @@ class GroupDetailsView extends ConsumerWidget {
             };
             canInteract = true;
           } else {
+            // Grupo Privado
             buttonText = "Solicitar Entrada";
             buttonColor = Colors.orange.shade700;
             buttonIcon = Icons.vpn_key_outlined;
             onPressed = () async {
               try {
+                 // Usando groupServiceProvider que foi importado
                 await ref
                     .read(groupServiceProvider)
                     .requestToJoinGroup(group.id, currentUserId);
@@ -536,13 +253,14 @@ class GroupDetailsView extends ConsumerWidget {
                       backgroundColor: Colors.orangeAccent,
                     ),
                   );
+                // Invalida detalhes para atualizar status (e.g., mostrar botão pendente)
                 ref.invalidate(groupDetailsProvider(group.id));
               } catch (e) {
                 if (context.mounted)
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        "Erro ao solicitar entrada: ${e.toString()}",
+                        "Erro ao solicitar entrada: ${e.toString().replaceFirst("Exception: ", "")}",
                       ),
                       backgroundColor: Colors.redAccent,
                     ),
@@ -556,19 +274,16 @@ class GroupDetailsView extends ConsumerWidget {
         return SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            icon:
-                isLoadingAction && canInteract
-                    ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                    : (buttonIcon != null
-                        ? Icon(buttonIcon, size: 20)
-                        : const SizedBox.shrink()),
+            icon: isLoadingAction && canInteract // Só mostra loading se pode interagir
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : Icon(buttonIcon, size: 20),
             label: Text(
               buttonText,
               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
@@ -583,24 +298,23 @@ class GroupDetailsView extends ConsumerWidget {
               disabledBackgroundColor: buttonColor.withOpacity(0.5),
               disabledForegroundColor: Colors.white.withOpacity(0.7),
             ),
+            // Desabilita se estiver carregando OU se canInteract for false
             onPressed: isLoadingAction || !canInteract ? null : onPressed,
           ),
         );
       },
-      loading:
-          () => const Center(
-            child: SizedBox(
-              height: 50,
-              child: CircularProgressIndicator(color: AppColors.primaryRed),
-            ),
-          ),
-      error:
-          (e, s) => const Center(
-            child: Text(
-              "Erro ao verificar usuário.",
-              style: TextStyle(color: Colors.redAccent),
-            ),
-          ),
+      loading: () => const Center(
+        child: SizedBox(
+          height: 50, // Altura igual ao botão para evitar pulos na UI
+          child: CircularProgressIndicator(color: AppColors.primaryRed),
+        ),
+      ),
+      error: (e, s) => const Center(
+        child: Text(
+          "Erro ao verificar usuário.",
+          style: TextStyle(color: Colors.redAccent),
+        ),
+      ),
     );
   }
 
@@ -609,6 +323,7 @@ class GroupDetailsView extends ConsumerWidget {
     final groupAsync = ref.watch(groupDetailsProvider(groupId));
     final currentUserId = ref.watch(currentUserProvider).asData?.value?.uid;
 
+    // Listener de erros (sem alterações)
     ref.listen<RaceActionState>(raceNotifierProvider, (_, next) {
       if (next.error != null && next.error!.isNotEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -618,6 +333,8 @@ class GroupDetailsView extends ConsumerWidget {
           ),
         );
       }
+      // Considere adicionar um listener para o groupNotifierProvider se ele gerenciar
+      // o estado de loading/erro das ações do grupo (join/leave/request/approve/reject).
     });
 
     return Scaffold(
@@ -646,46 +363,43 @@ class GroupDetailsView extends ConsumerWidget {
       ),
       body: SafeArea(
         child: groupAsync.when(
-          loading:
-              () => const Center(
-                child: CircularProgressIndicator(color: AppColors.primaryRed),
-              ),
-          error:
-              (error, stack) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        color: Colors.redAccent,
-                        size: 50,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        "Erro ao carregar grupo:\n$error",
-                        style: const TextStyle(
-                          color: Colors.redAccent,
-                          fontSize: 16,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton.icon(
-                        icon: const Icon(Icons.refresh),
-                        label: const Text("Tentar Novamente"),
-                        onPressed:
-                            () => ref.invalidate(groupDetailsProvider(groupId)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryRed,
-                          foregroundColor: AppColors.white,
-                        ),
-                      ),
-                    ],
+          loading: () => const Center(
+            child: CircularProgressIndicator(color: AppColors.primaryRed),
+          ),
+          error: (error, stack) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    color: Colors.redAccent,
+                    size: 50,
                   ),
-                ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Erro ao carregar grupo:\n$error",
+                    style: const TextStyle(
+                      color: Colors.redAccent,
+                      fontSize: 16,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.refresh),
+                    label: const Text("Tentar Novamente"),
+                    onPressed: () => ref.invalidate(groupDetailsProvider(groupId)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryRed,
+                      foregroundColor: AppColors.white,
+                    ),
+                  ),
+                ],
               ),
+            ),
+          ),
           data: (group) {
             if (group == null) {
               return const Center(
@@ -703,28 +417,25 @@ class GroupDetailsView extends ConsumerWidget {
               builder: (context, ownerRef, child) {
                 final ownerAsync = ownerRef.watch(userProvider(group.adminId));
                 return ownerAsync.when(
-                  data:
-                      (ownerUser) => Text(
-                        ownerUser?.name ?? '...',
-                        style: const TextStyle(
-                          color: AppColors.white,
-                          fontSize: 15,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                  loading:
-                      () => const Text(
-                        '...',
-                        style: TextStyle(
-                          color: AppColors.greyLight,
-                          fontSize: 15,
-                        ),
-                      ),
-                  error:
-                      (e, s) => const Text(
-                        'Erro',
-                        style: TextStyle(color: Colors.redAccent, fontSize: 15),
-                      ),
+                  data: (ownerUser) => Text(
+                    ownerUser?.name ?? '...',
+                    style: const TextStyle(
+                      color: AppColors.white,
+                      fontSize: 15,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  loading: () => const Text(
+                    '...',
+                    style: TextStyle(
+                      color: AppColors.greyLight,
+                      fontSize: 15,
+                    ),
+                  ),
+                  error: (e, s) => const Text(
+                    'Erro',
+                    style: TextStyle(color: Colors.redAccent, fontSize: 15),
+                  ),
                 );
               },
             );
@@ -737,9 +448,13 @@ class GroupDetailsView extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // --- Informações do Grupo ---
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Avatar pode ser adicionado aqui se desejado
+                      // CircleAvatar(...)
+                      // const SizedBox(width: 16),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -752,7 +467,7 @@ class GroupDetailsView extends ConsumerWidget {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            if (group.description!.isNotEmpty) ...[
+                            if (group.description != null && group.description!.isNotEmpty) ...[
                               const SizedBox(height: 6),
                               Text(
                                 group.description!,
@@ -790,9 +505,11 @@ class GroupDetailsView extends ConsumerWidget {
                   ),
                   const SizedBox(height: 24),
 
-                  _buildGroupActionButton(context, ref, group),
+                  // --- Botão de Ação Principal ---
+                  _buildGroupActionButton(context, ref, group), // Usa o helper atualizado
                   const SizedBox(height: 24),
 
+                  // --- Lista de Membros Confirmados (USA WIDGET IMPORTADO) ---
                   Text(
                     "Membros (${group.memberIds.length}):",
                     style: const TextStyle(
@@ -805,40 +522,42 @@ class GroupDetailsView extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
-                      vertical: 8,
+                      vertical: 8, // Reduzido um pouco se os itens tiverem padding interno
                     ),
                     decoration: BoxDecoration(
                       color: AppColors.underBackground.withOpacity(0.7),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child:
-                        group.memberIds.isEmpty
-                            ? const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 8.0),
-                              child: Text(
-                                "Nenhum membro ainda.",
-                                style: TextStyle(color: AppColors.greyLight),
-                              ),
-                            )
-                            : Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children:
-                                  group.memberIds
-                                      .map(
-                                        (userId) => _buildMemberItem(
-                                          context,
-                                          ref,
-                                          userId,
-                                          group.adminId,
-                                        ),
-                                      )
-                                      .toList(),
+                    child: group.memberIds.isEmpty
+                        ? const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text(
+                              "Nenhum membro ainda.",
+                              style: TextStyle(color: AppColors.greyLight),
+                              textAlign: TextAlign.center, // Centraliza o texto
                             ),
+                          )
+                        : Column(
+                            mainAxisSize: MainAxisSize.min,
+                            // --- MODIFICADO AQUI ---
+                            children: group.memberIds
+                                .map(
+                                  (userId) => MemberListItem( // Usa o Widget importado
+                                    userId: userId,
+                                    adminId: group.adminId,
+                                    // Não passa onRemove aqui, pois é a tela de detalhes
+                                    // Ações de remoção estarão na tela de gerenciamento
+                                  ),
+                                )
+                                .toList(),
+                             // --- FIM DA MODIFICAÇÃO ---
+                          ),
                   ),
                   const SizedBox(height: 24),
 
-                  if (isCurrentUserAdmin &&
-                      group.pendingMemberIds.isNotEmpty) ...[
+                  // --- Seção de Membros Pendentes (USA WIDGET IMPORTADO) ---
+                  // A lógica if/else if para mostrar/não mostrar a seção permanece igual
+                  if (isCurrentUserAdmin && group.pendingMemberIds.isNotEmpty && !group.isPublic) ...[
                     Text(
                       "Solicitações Pendentes (${group.pendingMemberIds.length}):",
                       style: const TextStyle(
@@ -851,7 +570,7 @@ class GroupDetailsView extends ConsumerWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
-                        vertical: 8,
+                        vertical: 8, // Reduzido um pouco
                       ),
                       decoration: BoxDecoration(
                         color: AppColors.underBackground.withOpacity(0.5),
@@ -862,21 +581,20 @@ class GroupDetailsView extends ConsumerWidget {
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
-                        children:
-                            group.pendingMemberIds
-                                .map(
-                                  (userId) => _buildPendingItem(
-                                    context,
-                                    ref,
-                                    userId,
-                                    group,
-                                  ),
-                                )
-                                .toList(),
+                        // --- MODIFICADO AQUI ---
+                        children: group.pendingMemberIds
+                            .map(
+                              (userId) => PendingMemberItem( // Usa o Widget importado
+                                pendingUserId: userId,
+                                groupId: group.id, // Passa groupId necessário para as ações
+                              ),
+                            )
+                            .toList(),
+                         // --- FIM DA MODIFICAÇÃO ---
                       ),
                     ),
                     const SizedBox(height: 24),
-                  ] else if (isCurrentUserAdmin) ...[
+                  ] else if (isCurrentUserAdmin && !group.isPublic) ...[ // Mostra seção vazia apenas para admin
                     const Text(
                       "Solicitações Pendentes:",
                       style: TextStyle(
@@ -904,7 +622,10 @@ class GroupDetailsView extends ConsumerWidget {
                     ),
                     const SizedBox(height: 24),
                   ],
+                  // --- Fim Seção Pendentes ---
 
+
+                  // --- Lista de Corridas do Grupo (sem alterações) ---
                   const Text(
                     "Corridas do Grupo:",
                     style: TextStyle(
@@ -934,45 +655,43 @@ class GroupDetailsView extends ConsumerWidget {
                           ),
                         );
                       }
+                      // Ordenar corridas, por exemplo, por data (opcional)
+                      // races.sort((a, b) => a.date.compareTo(b.date));
                       return Column(
-                        children:
-                            races
-                                .map(
-                                  (race) => Padding(
-                                    padding: const EdgeInsets.only(
-                                      bottom: 12.0,
-                                    ),
-                                    child: RaceCard(race: race),
-                                  ),
-                                )
-                                .toList(),
+                        children: races
+                            .map(
+                              (race) => Padding(
+                                padding: const EdgeInsets.only(bottom: 12.0),
+                                child: RaceCard(race: race), // Usa o RaceCard existente
+                              ),
+                            )
+                            .toList(),
                       );
                     },
-                    loading:
-                        () => const Center(
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(vertical: 20.0),
-                            child: CircularProgressIndicator(
-                              color: AppColors.primaryRed,
-                            ),
-                          ),
+                    loading: () => const Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20.0),
+                        child: CircularProgressIndicator(
+                          color: AppColors.primaryRed,
                         ),
-                    error:
-                        (e, s) => Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            "Erro ao carregar corridas: $e",
-                            style: const TextStyle(color: Colors.redAccent),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
+                      ),
+                    ),
+                    error: (e, s) => Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.redAccent.withOpacity(0.5)),
+                      ),
+                      child: Text(
+                        "Erro ao carregar corridas: ${e.toString()}",
+                        style: const TextStyle(color: Colors.redAccent),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 20), // Espaço final
                 ],
               ),
             );
