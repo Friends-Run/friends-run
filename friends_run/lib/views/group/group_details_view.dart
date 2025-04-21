@@ -212,18 +212,19 @@ class GroupDetailsView extends ConsumerWidget {
                 await ref
                     .read(groupServiceProvider)
                     .joinPublicGroup(group.id, currentUserId);
-                if (context.mounted)
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Você entrou no grupo "${group.name}"!'),
                       backgroundColor: Colors.green,
                     ),
                   );
+                }
                 ref.invalidate(userGroupsProvider);
                 ref.invalidate(groupDetailsProvider(group.id));
                 ref.invalidate(allGroupsProvider); // Invalida lista geral
               } catch (e) {
-                if (context.mounted)
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
@@ -232,6 +233,7 @@ class GroupDetailsView extends ConsumerWidget {
                       backgroundColor: Colors.redAccent,
                     ),
                   );
+                }
               }
             };
             canInteract = true;
@@ -246,17 +248,18 @@ class GroupDetailsView extends ConsumerWidget {
                 await ref
                     .read(groupServiceProvider)
                     .requestToJoinGroup(group.id, currentUserId);
-                if (context.mounted)
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Solicitação enviada!'),
                       backgroundColor: Colors.orangeAccent,
                     ),
                   );
+                }
                 // Invalida detalhes para atualizar status (e.g., mostrar botão pendente)
                 ref.invalidate(groupDetailsProvider(group.id));
               } catch (e) {
-                if (context.mounted)
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
@@ -265,6 +268,7 @@ class GroupDetailsView extends ConsumerWidget {
                       backgroundColor: Colors.redAccent,
                     ),
                   );
+                }
               }
             };
             canInteract = true;
