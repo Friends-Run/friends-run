@@ -2,16 +2,19 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:friends_run/views/group/group_details_view.dart';
+import 'package:friends_run/views/race/create_race/widgets/address_input_section.dart';
+import 'package:friends_run/views/race/create_race/widgets/create_button.dart';
+import 'package:friends_run/views/race/create_race/widgets/date_time_picker_field.dart';
+import 'package:friends_run/views/race/create_race/widgets/distance_indicator.dart';
+import 'package:friends_run/views/race/create_race/widgets/map_section.dart';
+import 'package:friends_run/views/race/create_race/widgets/privacy_toggle.dart';
+import 'package:friends_run/views/race/create_race/widgets/race_title_field.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:intl/intl.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:friends_run/core/providers/auth_provider.dart';
 import 'package:friends_run/core/providers/race_provider.dart';
 import 'package:friends_run/core/utils/colors.dart';
-import 'package:friends_run/core/utils/validationsUtils.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 
 // Provider inicial do mapa
 final initialMapPositionProvider = FutureProvider<CameraPosition>((ref) async {
@@ -84,10 +87,8 @@ class _CreateRaceViewState extends ConsumerState<CreateRaceView> {
     }
 
     final distanceInMeters = Geolocator.distanceBetween(
-      _startLatLng!.latitude,
-      _startLatLng!.longitude,
-      _endLatLng!.latitude,
-      _endLatLng!.longitude,
+      _startLatLng!.latitude, _startLatLng!.longitude,
+      _endLatLng!.latitude, _endLatLng!.longitude,
     );
 
     if (mounted) {
@@ -117,11 +118,8 @@ class _CreateRaceViewState extends ConsumerState<CreateRaceView> {
     if (pickedTime != null && mounted) {
       setState(() {
         _selectedDateTime = DateTime(
-          pickedDate.year,
-          pickedDate.month,
-          pickedDate.day,
-          pickedTime.hour,
-          pickedTime.minute,
+          pickedDate.year, pickedDate.month, pickedDate.day,
+          pickedTime.hour, pickedTime.minute,
         );
       });
     }
@@ -141,9 +139,7 @@ class _CreateRaceViewState extends ConsumerState<CreateRaceView> {
     final newMarker = Marker(
       markerId: markerId,
       position: position,
-      infoWindow: InfoWindow(
-        title: isStartPoint ? 'Ponto Inicial' : 'Ponto Final',
-      ),
+      infoWindow: InfoWindow(title: isStartPoint ? 'Ponto Inicial' : 'Ponto Final'),
       icon: BitmapDescriptor.defaultMarkerWithHue(
         isStartPoint ? BitmapDescriptor.hueGreen : BitmapDescriptor.hueRed,
       ),
@@ -175,11 +171,7 @@ class _CreateRaceViewState extends ConsumerState<CreateRaceView> {
         });
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Redefinindo ponto inicial. Toque novamente para o ponto final.',
-          ),
-        ),
+        const SnackBar(content: Text('Redefinindo ponto inicial. Toque novamente para o ponto final.')),
       );
       return;
     }
@@ -198,7 +190,7 @@ class _CreateRaceViewState extends ConsumerState<CreateRaceView> {
 
   void _onMarkerDragEnd(String markerIdValue, LatLng newPosition) {
     final isStartPoint = markerIdValue == 'start';
-
+    
     if (isStartPoint) {
       _startLatLng = newPosition;
     } else {
@@ -216,52 +208,40 @@ class _CreateRaceViewState extends ConsumerState<CreateRaceView> {
     if (_startLatLng != null && _endLatLng != null) {
       final bounds = LatLngBounds(
         southwest: LatLng(
-          _startLatLng!.latitude < _endLatLng!.latitude
-              ? _startLatLng!.latitude
+          _startLatLng!.latitude < _endLatLng!.latitude 
+              ? _startLatLng!.latitude 
               : _endLatLng!.latitude,
-          _startLatLng!.longitude < _endLatLng!.longitude
-              ? _startLatLng!.longitude
+          _startLatLng!.longitude < _endLatLng!.longitude 
+              ? _startLatLng!.longitude 
               : _endLatLng!.longitude,
         ),
         northeast: LatLng(
-          _startLatLng!.latitude > _endLatLng!.latitude
-              ? _startLatLng!.latitude
+          _startLatLng!.latitude > _endLatLng!.latitude 
+              ? _startLatLng!.latitude 
               : _endLatLng!.latitude,
-          _startLatLng!.longitude > _endLatLng!.longitude
-              ? _startLatLng!.longitude
+          _startLatLng!.longitude > _endLatLng!.longitude 
+              ? _startLatLng!.longitude 
               : _endLatLng!.longitude,
         ),
       );
       _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 60.0));
     } else if (_startLatLng != null) {
-      _mapController!.animateCamera(
-        CameraUpdate.newLatLngZoom(_startLatLng!, 15.0),
-      );
+      _mapController!.animateCamera(CameraUpdate.newLatLngZoom(_startLatLng!, 15.0));
     } else if (_endLatLng != null) {
-      _mapController!.animateCamera(
-        CameraUpdate.newLatLngZoom(_endLatLng!, 15.0),
-      );
+      _mapController!.animateCamera(CameraUpdate.newLatLngZoom(_endLatLng!, 15.0));
     }
   }
 
   // MARK: - Geocoding Methods
 
-  Future<void> _reverseGeocodeAndUpdateField(
-    LatLng point, {
-    required bool isStartPoint,
-  }) async {
-    final controller =
-        isStartPoint ? _startAddressController : _endAddressController;
-
+  Future<void> _reverseGeocodeAndUpdateField(LatLng point, {required bool isStartPoint}) async {
+    final controller = isStartPoint ? _startAddressController : _endAddressController;
+    
     try {
-      final placemarks = await placemarkFromCoordinates(
-        point.latitude,
-        point.longitude,
-      );
-      final addressText =
-          placemarks.isEmpty
-              ? "Detalhes do endereço não disponíveis"
-              : _formatPlacemark(placemarks.first);
+      final placemarks = await placemarkFromCoordinates(point.latitude, point.longitude);
+      final addressText = placemarks.isEmpty 
+          ? "Detalhes do endereço não disponíveis"
+          : _formatPlacemark(placemarks.first);
 
       if (mounted) {
         setState(() => controller.text = addressText);
@@ -282,13 +262,12 @@ class _CreateRaceViewState extends ConsumerState<CreateRaceView> {
       placemark.subLocality,
       placemark.locality,
       placemark.administrativeArea,
-      placemark.postalCode,
+      placemark.postalCode
     ].where((s) => s != null && s.isNotEmpty).join(', ');
   }
 
   Future<void> _geocodeAddress({required bool isStartPoint}) async {
-    final addressController =
-        isStartPoint ? _startAddressController : _endAddressController;
+    final addressController = isStartPoint ? _startAddressController : _endAddressController;
     final address = addressController.text.trim();
 
     if (address.isEmpty) {
@@ -327,9 +306,7 @@ class _CreateRaceViewState extends ConsumerState<CreateRaceView> {
       }
 
       _updateMapMarker(foundLatLng, isStartPoint: isStartPoint);
-      _mapController?.animateCamera(
-        CameraUpdate.newLatLngZoom(foundLatLng, 15.0),
-      );
+      _mapController?.animateCamera(CameraUpdate.newLatLngZoom(foundLatLng, 15.0));
       _animateCameraToBounds();
     } catch (e) {
       debugPrint("Erro na geocodificação: $e");
@@ -402,17 +379,15 @@ class _CreateRaceViewState extends ConsumerState<CreateRaceView> {
       return;
     }
 
-    final race = await ref
-        .read(raceNotifierProvider.notifier)
-        .createRace(
-          title: _titleController.text.trim(),
-          date: _selectedDateTime!,
-          startAddress: _formatAddress(_startAddressController.text),
-          endAddress: _formatAddress(_endAddressController.text),
-          owner: currentUser,
-          isPrivate: widget.groupId != null ? false : _isPrivate,
-          groupId: widget.groupId,
-        );
+    final race = await ref.read(raceNotifierProvider.notifier).createRace(
+      title: _titleController.text.trim(),
+      date: _selectedDateTime!,
+      startAddress: _formatAddress(_startAddressController.text),
+      endAddress: _formatAddress(_endAddressController.text),
+      owner: currentUser,
+      isPrivate: widget.groupId != null ? false : _isPrivate,
+      groupId: widget.groupId,
+    );
 
     if (race != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -428,245 +403,6 @@ class _CreateRaceViewState extends ConsumerState<CreateRaceView> {
     }
   }
 
-  // MARK: - Widget Building Methods
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required String? Function(String?)? validator,
-    IconData? icon,
-    bool showSearchIcon = false,
-    VoidCallback? onSearchPressed,
-    bool isLoading = false,
-  }) {
-    return TextFormField(
-      controller: controller,
-      enabled: !ref.read(raceNotifierProvider).isLoading,
-      style: const TextStyle(color: AppColors.white),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(color: AppColors.greyLight),
-        filled: true,
-        fillColor: AppColors.underBackground,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ),
-        prefixIcon:
-            icon != null ? Icon(icon, color: AppColors.primaryRed) : null,
-        suffixIcon:
-            showSearchIcon
-                ? isLoading
-                    ? const Padding(
-                      padding: EdgeInsets.all(12.0),
-                      child: SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.primaryRed,
-                        ),
-                      ),
-                    )
-                    : IconButton(
-                      icon: const Icon(
-                        Icons.location_searching,
-                        color: AppColors.greyLight,
-                      ),
-                      onPressed: onSearchPressed,
-                    )
-                : null,
-      ),
-      validator: validator,
-    );
-  }
-
-  Widget _buildDateTimePicker() {
-    return ListTile(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      tileColor: AppColors.underBackground,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 12.0,
-        vertical: 4.0,
-      ),
-      leading: const Icon(Icons.calendar_today, color: AppColors.primaryRed),
-      title: Text(
-        _selectedDateTime == null
-            ? 'Data e Hora da Corrida *'
-            : DateFormat('dd/MM/yyyy \'às\' HH:mm').format(_selectedDateTime!),
-        style: TextStyle(
-          color:
-              _selectedDateTime == null ? AppColors.greyLight : AppColors.white,
-          fontSize: 16,
-        ),
-      ),
-      trailing: const Icon(Icons.edit, color: AppColors.greyLight, size: 18),
-      onTap: ref.read(raceNotifierProvider).isLoading ? null : _pickDateTime,
-    );
-  }
-
-  Widget _buildDistanceIndicator() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.straighten, color: AppColors.primaryRed, size: 20),
-          const SizedBox(width: 8),
-          Text(
-            "Distância: ${_calculatedDistanceKm!.toStringAsFixed(1)} km",
-            style: const TextStyle(
-              color: AppColors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAddressField({required bool isStartPoint}) {
-    return _buildTextField(
-      controller:
-          isStartPoint ? _startAddressController : _endAddressController,
-      label: isStartPoint ? 'Endereço de Início *' : 'Endereço de Chegada *',
-      validator: ValidationUtils.validateAddress,
-      icon: isStartPoint ? Icons.flag : Icons.location_on,
-      showSearchIcon: true,
-      onSearchPressed: () => _geocodeAddress(isStartPoint: isStartPoint),
-      isLoading: isStartPoint ? _isGeocodingStart : _isGeocodingEnd,
-    );
-  }
-
-  Widget _buildMapSection(AsyncValue<CameraPosition> initialCameraPosition) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Mapa Interativo:",
-          style: TextStyle(color: AppColors.white, fontSize: 16),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4.0),
-          child: Text(
-            _markers.isEmpty
-                ? "Busque pelos endereços ou toque no mapa."
-                : _markers.length == 1
-                ? "Defina o segundo endereço ou toque/arraste."
-                : "Arraste os marcadores para ajustar.",
-            style: const TextStyle(
-              color: AppColors.greyLight,
-              fontStyle: FontStyle.italic,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 250,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: initialCameraPosition.when(
-              data:
-                  (initialPosition) => GoogleMap(
-                    onMapCreated: _onMapCreated,
-                    initialCameraPosition: initialPosition,
-                    markers: _markers,
-                    onTap: _onMapTap,
-                    mapType: MapType.normal,
-                    myLocationEnabled: true,
-                    myLocationButtonEnabled: true,
-                    zoomControlsEnabled: true,
-                    compassEnabled: true,
-                    gestureRecognizers: {
-                      Factory<ScaleGestureRecognizer>(
-                        () => ScaleGestureRecognizer(),
-                      ),
-                      Factory<TapGestureRecognizer>(
-                        () => TapGestureRecognizer(),
-                      ),
-                      Factory<PanGestureRecognizer>(
-                        () => PanGestureRecognizer(),
-                      ),
-                    },
-                    scrollGesturesEnabled: true,
-                    zoomGesturesEnabled: true,
-                    rotateGesturesEnabled: true,
-                    tiltGesturesEnabled: true,
-                  ),
-              loading:
-                  () => const Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.primaryRed,
-                    ),
-                  ),
-              error:
-                  (err, stack) => Center(
-                    child: Text(
-                      "Erro ao carregar mapa: $err",
-                      style: const TextStyle(color: Colors.redAccent),
-                    ),
-                  ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPrivacyToggle() {
-    return SwitchListTile(
-      title: const Text(
-        "Corrida Privada?",
-        style: TextStyle(color: AppColors.white),
-      ),
-      subtitle: Text(
-        _isPrivate
-            ? "Corrida privada para convidados."
-            : "Corrida aberta ao público.",
-        style: const TextStyle(color: AppColors.greyLight),
-      ),
-      value: _isPrivate,
-      onChanged:
-          ref.read(raceNotifierProvider).isLoading
-              ? null
-              : (value) => setState(() => _isPrivate = value),
-      activeColor: AppColors.primaryRed,
-      tileColor: AppColors.underBackground,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12.0),
-    );
-  }
-
-  Widget _buildCreateButton(RaceActionState actionState) {
-    return ElevatedButton.icon(
-      icon: const Icon(Icons.check, color: AppColors.white),
-      label: const Text(
-        'Criar Corrida',
-        style: TextStyle(fontSize: 16, color: AppColors.white),
-      ),
-      onPressed: actionState.isLoading ? null : _createRace,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.primaryRed,
-        padding: const EdgeInsets.symmetric(vertical: 15),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-  }
-
-  Widget _buildLoadingIndicator() {
-    return const Padding(
-      padding: EdgeInsets.only(top: 16.0),
-      child: Center(
-        child: CircularProgressIndicator(color: AppColors.primaryRed),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final actionState = ref.watch(raceNotifierProvider);
@@ -674,9 +410,10 @@ class _CreateRaceViewState extends ConsumerState<CreateRaceView> {
 
     ref.listen<RaceActionState>(raceNotifierProvider, (_, next) {
       if (next.error != null && next.error!.isNotEmpty && mounted) {
+        ScaffoldMessenger.of(context).removeCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(next.error!),
+            content: Text("Erro: ${next.error!}"),
             backgroundColor: AppColors.primaryRed,
           ),
         );
@@ -684,23 +421,20 @@ class _CreateRaceViewState extends ConsumerState<CreateRaceView> {
       }
     });
 
-    final appBarTitle =
-        widget.groupId == null
-            ? 'Criar Nova Corrida'
-            : 'Nova Corrida: ${widget.groupName ?? 'Grupo'}';
+    final appBarTitle = widget.groupId == null 
+        ? 'Criar Nova Corrida' 
+        : 'Nova Corrida: ${widget.groupName ?? 'Grupo'}';
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text(
-          appBarTitle,
-          style: const TextStyle(color: AppColors.white),
-        ),
+        title: Text(appBarTitle, style: const TextStyle(color: AppColors.white)),
         backgroundColor: AppColors.background,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppColors.white),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.white),
-          onPressed:
-              actionState.isLoading ? null : () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          onPressed: actionState.isLoading ? null : () => Navigator.pop(context),
         ),
         actions: [
           if (_markers.isNotEmpty)
@@ -720,40 +454,54 @@ class _CreateRaceViewState extends ConsumerState<CreateRaceView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildTextField(
+                RaceTitleField(
                   controller: _titleController,
-                  label: 'Título da Corrida *',
-                  validator:
-                      (value) =>
-                          value?.isEmpty ?? true
-                              ? 'Título é obrigatório'
-                              : null,
-                  icon: Icons.flag,
+                  enabled: !actionState.isLoading,
                 ),
                 const SizedBox(height: 16),
-                _buildDateTimePicker(),
-                const SizedBox(height: 20),
-                const Text(
-                  "Endereços (Início e Fim):",
-                  style: TextStyle(color: AppColors.white, fontSize: 16),
+                DateTimePickerField(
+                  selectedDateTime: _selectedDateTime,
+                  onTap: _pickDateTime,
                 ),
-                const SizedBox(height: 12),
-                _buildAddressField(isStartPoint: true),
-                const SizedBox(height: 12),
-                _buildAddressField(isStartPoint: false),
                 const SizedBox(height: 20),
-                if (_calculatedDistanceKm != null) _buildDistanceIndicator(),
+                if (_calculatedDistanceKm != null)
+                  DistanceIndicator(distanceKm: _calculatedDistanceKm!),
+                AddressInputSection(
+                  startController: _startAddressController,
+                  endController: _endAddressController,
+                  isGeocodingStart: _isGeocodingStart,
+                  isGeocodingEnd: _isGeocodingEnd,
+                  onGeocode: _geocodeAddress,
+                  enabled: !actionState.isLoading,
+                ),
                 const SizedBox(height: 20),
-                _buildMapSection(initialCameraPositionAsync),
+                MapSection(
+                  initialCameraPositionAsync: initialCameraPositionAsync,
+                  markers: _markers,
+                  onMapCreated: _onMapCreated,
+                  onMapTap: _onMapTap,
+                ),
                 const SizedBox(height: 20),
                 if (widget.groupId == null) ...[
-                  _buildPrivacyToggle(),
+                  PrivacyToggle(
+                    isPrivate: _isPrivate,
+                    onChanged: (value) => setState(() => _isPrivate = value),
+                  ),
                   const SizedBox(height: 30),
                 ] else ...[
                   const SizedBox(height: 30),
                 ],
-                _buildCreateButton(actionState),
-                if (actionState.isLoading) _buildLoadingIndicator(),
+                CreateRaceButton(
+                  isLoading: actionState.isLoading,
+                  onPressed: _createRace,
+                ),
+                if (actionState.isLoading)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 16.0),
+                    child: Center(
+                      child: CircularProgressIndicator(color: AppColors.primaryRed),
+                    ),
+                  ),
               ],
             ),
           ),
