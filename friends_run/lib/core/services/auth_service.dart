@@ -321,7 +321,7 @@ class AuthService {
       }
 
       // 3. Atualizar Foto de Perfil (se nova imagem fornecida)
-      String? finalImageUrlForUpdate = null;
+      String? finalImageUrlForUpdate;
       if (newProfileImage != null) {
          debugPrint("--- AuthService.updateUserProfile: Nova imagem fornecida. Fazendo upload... ---");
         try {
@@ -376,7 +376,7 @@ class AuthService {
     } catch (e) {
        debugPrint("--- AuthService.updateUserProfile: ERRO GERAL: $e ---");
        if (e is Exception) {
-         throw e;
+         rethrow;
        }
        throw Exception('Ocorreu um erro inesperado ao salvar seu perfil.');
     }

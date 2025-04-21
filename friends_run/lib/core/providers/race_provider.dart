@@ -400,17 +400,20 @@ final displayedRacesProvider = Provider.autoDispose<AsyncValue<List<Race>>>((
 
   final races = nearbyRacesAsync.value ?? [];
   List<Race> filteredRaces = [];
+  
+  // Novo passo: Filtra para remover corridas de grupo
+  final nonGroupRaces = races.where((race) => race.groupId == null || race.groupId!.isEmpty).toList();
 
   switch (filterOption) {
     case RaceFilterOption.publicas:
-      filteredRaces = races.where((race) => !race.isPrivate).toList();
+      filteredRaces = nonGroupRaces.where((race) => !race.isPrivate).toList();
       break;
     case RaceFilterOption.privadas:
-      filteredRaces = races.where((race) => race.isPrivate).toList();
+      filteredRaces = nonGroupRaces.where((race) => race.isPrivate).toList();
       break;
     case RaceFilterOption.todas:
     default:
-      filteredRaces = List.from(races);
+      filteredRaces = List.from(nonGroupRaces);
       break;
   }
 
