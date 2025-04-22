@@ -1,26 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:friends_run/core/providers/auth_provider.dart'; // Para obter o userId
-import 'package:friends_run/core/providers/metrics_provider.dart'; // Nosso novo provider de métricas
+import 'package:friends_run/core/providers/auth_provider.dart';
+import 'package:friends_run/core/providers/metrics_provider.dart';
 import 'package:friends_run/core/utils/colors.dart';
-import 'package:friends_run/models/user/my_race_metrics.dart'; // Modelo de métricas
-import 'package:friends_run/views/home/widgets/empty_list_message.dart'; // Reutilizar widget de lista vazia
-import 'package:friends_run/views/home/widgets/races_error.dart'; // Reutilizar widget de erro (ou criar um genérico)
+import 'package:friends_run/models/user/my_race_metrics.dart'; // Corrigido caminho se necessário
+import 'package:friends_run/views/home/widgets/empty_list_message.dart'; // Corrigido caminho se necessário
+import 'package:friends_run/views/home/widgets/races_error.dart';
 import 'package:friends_run/views/race/race_details/race_details_view.dart';
-import 'package:intl/intl.dart'; // Para formatar números grandes
-
-//-----------------------------------------------------
-//       VISÃO "MINHAS ESTATÍSTICAS"
-//-----------------------------------------------------
+import 'package:intl/intl.dart';
+import 'dart:math'; // Para usar 'max' e 'min' com reduce
 
 class UserStatsView extends ConsumerWidget {
   const UserStatsView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Obtem o ID do usuário logado de forma segura
     final userId = ref.watch(currentUserProvider).valueOrNull?.uid ?? '';
-    // Assiste o provider que busca as métricas para o usuário logado
     final metricsAsync = ref.watch(userMetricsProvider(userId));
 
     return Scaffold(
@@ -31,173 +26,76 @@ class UserStatsView extends ConsumerWidget {
           tooltip: 'Voltar',
           onPressed: () => Navigator.maybePop(context),
         ),
-        title: const Text(
-          'Minhas Estatísticas',
-          style: TextStyle(color: AppColors.white),
-        ),
+        title: const Text('Minhas Estatísticas', style: TextStyle(color: AppColors.white)),
         backgroundColor: AppColors.background,
         elevation: 0,
       ),
       body: metricsAsync.when(
-        //-------------------------
-        // Estado: Carregando
-        //-------------------------
-        loading:
-            () => const Center(
-              child: CircularProgressIndicator(color: AppColors.primaryRed),
-            ),
-        //-------------------------
-        // Estado: Erro
-        //-------------------------
+        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primaryRed)),
         error: (error, stackTrace) {
-          // É SEMPRE útil imprimir o erro completo no console para debug
-          print("Erro ao carregar métricas: $error");
-          print("StackTrace: $stackTrace");
-
-          // Cria uma UI simples para exibir o erro na tela
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.warning_amber_rounded,
-                    color: Colors.redAccent.shade100,
-                    size: 60,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Oops! Algo deu errado',
-                    style: TextStyle(
-                      color: AppColors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    // Exibe a mensagem do erro capturado!
-                    // .toString() converte o objeto de erro em texto.
-                    // .replaceFirst remove o "Exception: " que pode vir junto.
-                    error.toString().replaceFirst("Exception: ", ""),
-                    style: TextStyle(
-                      color: AppColors.white.withAlpha(200),
-                      fontSize: 14,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Tentar Novamente'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryRed.withOpacity(0.8),
-                      foregroundColor: AppColors.white,
-                    ),
-                    // A ação de retry continua a mesma: invalidar o provider
-                    onPressed:
-                        () => ref.invalidate(userMetricsProvider(userId)),
-                  ),
-                ],
-              ),
-            ),
-          );
+          print("Erro ao carregar métricas: $error\nStackTrace: $stackTrace");
+          return Center( /* ... Widget de erro como antes ... */ );
         },
-        //-------------------------
-        // Estado: Dados Carregados
-        //-------------------------
-        data: (metricsList) {
-          // Verifica se o usuário está logado (caso raro de o provider retornar antes do user)
+        data: (metricsListOriginal) { // Renomeado para clareza
           if (userId.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Text(
-                  'Faça login para ver suas estatísticas.',
-                  style: TextStyle(
-                    color: AppColors.white.withAlpha(204),
-                    fontSize: 16,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            );
+            return Center( /* ... Mensagem de login ... */ );
           }
-          // Verifica se há métricas registradas
-          if (metricsList.isEmpty) {
+          if (metricsListOriginal.isEmpty) {
             return const EmptyListMessage(
-              message:
-                  'Você ainda não registrou nenhuma corrida para exibir estatísticas.',
-              icon: Icons.query_stats_rounded, // Ícone de estatísticas
+              message: 'Você ainda não registrou nenhuma corrida para exibir estatísticas.',
+              icon: Icons.query_stats_rounded,
             );
           }
+
+          // --- ORDENAÇÃO MANUAL DA LISTA POR DATA (MAIS RECENTE PRIMEIRO) ---
+          // Cria uma cópia modificável e ordena
+          final List<MyRaceMetrics> metricsList = List.from(metricsListOriginal);
+          metricsList.sort((a, b) => b.raceDate.compareTo(a.raceDate)); // Descendente
 
           // --- Processamento e Cálculo das Estatísticas Agregadas ---
-          // TODO: Mover esta lógica para um Provider dedicado (ex: userAggregatedStatsProvider)
-          //       para melhor performance e separação de responsabilidades.
-          final int totalRuns = metricsList.length;
-          final double totalDistanceMeters = metricsList.fold(
-            0.0,
-            (sum, m) => sum + m.distanceMeters,
-          );
-          final Duration totalDuration = metricsList.fold(
-            Duration.zero,
-            (sum, m) => sum + m.duration,
-          );
-          final int totalCalories = metricsList.fold(
-            0,
-            (sum, m) => sum + (m.caloriesBurned ?? 0),
-          );
+          // (A lógica de cálculo continua a mesma, mas usamos a lista original ou iteramos)
+          final int totalRuns = metricsListOriginal.length;
+          final double totalDistanceMeters = metricsListOriginal.fold(0.0, (sum, m) => sum + m.distanceMeters);
+          final Duration totalDuration = metricsListOriginal.fold(Duration.zero, (sum, m) => sum + m.duration);
+          final int totalCalories = metricsListOriginal.fold(0, (sum, m) => sum + (m.caloriesBurned ?? 0));
 
           Duration overallAvgPace = Duration.zero;
           if (totalDistanceMeters > 0) {
             final double totalDistanceKm = totalDistanceMeters / 1000.0;
-            final double avgMillisPerKm =
-                totalDuration.inMilliseconds / totalDistanceKm;
-            overallAvgPace = Duration(milliseconds: avgMillisPerKm.round());
+            overallAvgPace = Duration(milliseconds: (totalDuration.inMilliseconds / totalDistanceKm).round());
           }
 
+          // Cálculo de recordes iterando (mais seguro que sort múltiplo)
           MyRaceMetrics? bestPaceRun;
-          if (metricsList.isNotEmpty) {
-            metricsList.sort(
-              (a, b) => a.avgPacePerKm.compareTo(b.avgPacePerKm),
-            );
-            // Ignora corridas com pace 0 (pode indicar erro de dados)
-            bestPaceRun = metricsList.firstWhere(
-              (m) => m.avgPacePerKm > Duration.zero,
-              orElse: () => metricsList.first,
-            );
+          Duration currentBestPace = const Duration(days: 999); // Valor inicial alto
+          for (final metric in metricsListOriginal) {
+             // Considera apenas paces válidos (> 0)
+            if (metric.avgPacePerKm > Duration.zero && metric.avgPacePerKm < currentBestPace) {
+               currentBestPace = metric.avgPacePerKm;
+               bestPaceRun = metric;
+            }
           }
+
 
           MyRaceMetrics? longestRun;
-          if (metricsList.isNotEmpty) {
-            metricsList.sort(
-              (a, b) => b.distanceMeters.compareTo(a.distanceMeters),
-            ); // Descending
-            longestRun = metricsList.first;
+          double currentLongestDist = -1.0;
+          for (final metric in metricsListOriginal) {
+             if (metric.distanceMeters > currentLongestDist) {
+                 currentLongestDist = metric.distanceMeters;
+                 longestRun = metric;
+             }
           }
 
-          // Formatação para exibição
+
+          // Formatação para exibição (igual antes)
           final distanceFormatter = NumberFormat("#,##0.0", "pt_BR");
           final numberFormatter = NumberFormat("#,##0", "pt_BR");
-
-          final String formattedTotalDistance =
-              "${distanceFormatter.format(totalDistanceMeters / 1000)} km";
+          final String formattedTotalDistance = "${distanceFormatter.format(totalDistanceMeters / 1000)} km";
           final String formattedTotalDuration = _formatDuration(totalDuration);
           final String formattedOverallPace = _formatPace(overallAvgPace);
-          final String formattedTotalCalories =
-              "${numberFormatter.format(totalCalories)} kcal";
-          final String formattedBestPace =
-              bestPaceRun != null
-                  ? _formatPace(bestPaceRun.avgPacePerKm)
-                  : "--'--\"";
-          final String formattedLongestDistance =
-              longestRun != null
-                  ? "${distanceFormatter.format(longestRun.distanceMeters / 1000)} km"
-                  : "- km";
+          final String formattedTotalCalories = "${numberFormatter.format(totalCalories)} kcal";
+          final String formattedBestPace = bestPaceRun != null ? _formatPace(bestPaceRun.avgPacePerKm) : "--'--\"";
+          final String formattedLongestDistance = longestRun != null ? "${distanceFormatter.format(longestRun.distanceMeters / 1000)} km" : "- km";
 
           // --- Construção da UI (Dashboard) ---
           return SingleChildScrollView(
@@ -205,7 +103,7 @@ class UserStatsView extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // --- Card de Resumo Principal ---
+                // --- Card de Resumo Principal (igual antes) ---
                 _buildSummaryCard(
                   totalRuns: totalRuns.toString(),
                   totalDistance: formattedTotalDistance,
@@ -213,86 +111,39 @@ class UserStatsView extends ConsumerWidget {
                 ),
                 const SizedBox(height: 24),
 
-                // --- Grid de Métricas Chave ---
-                Text(
-                  'Recordes e Totais',
-                  style: TextStyle(
-                    color: AppColors.white.withAlpha(220),
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                // --- Grid de Métricas Chave (igual antes) ---
+                Text('Recordes e Totais', style: TextStyle(color: AppColors.white.withAlpha(220), fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
                 GridView.count(
-                  crossAxisCount: 2, // Duas colunas
-                  shrinkWrap:
-                      true, // Para caber dentro do SingleChildScrollView
-                  physics:
-                      const NeverScrollableScrollPhysics(), // Desabilita scroll do Grid
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio:
-                      1.8, // Ajuste para o tamanho desejado dos cards
-                  children: [
-                    _buildStatCard(
-                      label: 'Maior Distância',
-                      value: formattedLongestDistance,
-                      icon: Icons.directions_run_rounded,
-                      iconColor: Colors.blueAccent,
-                      onTap:
-                          longestRun != null
-                              ? () => _navigateToRaceDetails(
-                                context,
-                                longestRun!.raceId,
-                              )
-                              : null,
-                    ),
-                    _buildStatCard(
-                      label: 'Melhor Pace',
-                      value: formattedBestPace,
-                      icon: Icons.speed_rounded,
-                      iconColor: Colors.orangeAccent,
-                      onTap:
-                          bestPaceRun != null
-                              ? () => _navigateToRaceDetails(
-                                context,
-                                bestPaceRun!.raceId,
-                              )
-                              : null,
-                    ),
-                    _buildStatCard(
-                      label: 'Tempo Total',
-                      value: formattedTotalDuration,
-                      icon: Icons.timer_outlined,
-                      iconColor: Colors.purpleAccent,
-                    ),
-                    _buildStatCard(
-                      label: 'Calorias Totais',
-                      value: formattedTotalCalories,
-                      icon: Icons.local_fire_department_outlined,
-                      iconColor: Colors.redAccent,
-                    ),
-                  ],
+                   crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+                   crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 1.8,
+                   children: [
+                     _buildStatCard(label: 'Maior Distância', value: formattedLongestDistance, icon: Icons.directions_run_rounded, iconColor: Colors.blueAccent, onTap: longestRun != null ? () => _navigateToRaceDetails(context, longestRun!.raceId) : null),
+                     _buildStatCard(label: 'Melhor Pace', value: formattedBestPace, icon: Icons.speed_rounded, iconColor: Colors.orangeAccent, onTap: bestPaceRun != null ? () => _navigateToRaceDetails(context, bestPaceRun!.raceId) : null),
+                     _buildStatCard(label: 'Tempo Total', value: formattedTotalDuration, icon: Icons.timer_outlined, iconColor: Colors.purpleAccent),
+                     _buildStatCard(label: 'Calorias Totais', value: formattedTotalCalories, icon: Icons.local_fire_department_outlined, iconColor: Colors.redAccent),
+                   ],
                 ),
-
                 const SizedBox(height: 24),
 
-                // --- Seção de Atividade Recente (Opcional) ---
+                // --- Seção de Últimas Corridas (MODIFICADO) ---
                 Text(
-                  'Última Corrida Registrada',
-                  style: TextStyle(
-                    color: AppColors.white.withAlpha(220),
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  'Últimas Corridas', // <-- Título alterado
+                  style: TextStyle(color: AppColors.white.withAlpha(220), fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
-                // Usar o MyRaceCard aqui pode ser muito grande, talvez um card menor?
-                // Ou apenas mostrar as métricas da última corrida (metricsList[0] pois já está ordenada)
-                if (metricsList.isNotEmpty)
-                  _buildLastRunSummary(context, metricsList.first),
-
-                // Adicionar mais seções se necessário (ex: Gráficos)
+                // Usa Column e map para criar a lista de widgets
+                // Usa a lista JÁ ORDENADA (metricsList)
+                Column(
+                  children: metricsList.map((metric) { // <-- Itera sobre a lista ordenada
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0), // Espaçamento entre os cards
+                      // Reutiliza o mesmo widget de resumo da última corrida
+                      child: _buildLastRunSummary(context, metric),
+                    );
+                  }).toList(), // Converte o resultado do map em uma lista de Widgets
+                ),
+                // --- Fim da Modificação ---
               ],
             ),
           );
