@@ -23,6 +23,40 @@ O aplicativo a ser desenvolvido tem como objetivo conectar corredores e equipes 
 
 A proposta do aplicativo é unir tecnologia e esportes, promovendo uma experiência dinâmica, motivadora e social para os apaixonados por corrida.  
 
+### 🚀 Rodando o Projeto Localmente
+
+Siga estas instruções para configurar e executar o projeto **Friends Run** em seu ambiente de desenvolvimento.
+
+----
+
+### ✅ Pré-requisitos
+
+Antes de começar, certifique-se de ter instalado:
+
+- **Flutter SDK**: Siga o [guia oficial de instalação do Flutter](https://flutter.dev/docs/get-started/install) para sua plataforma. Verifique a instalação com `flutter doctor`.
+- **Git**: Necessário para clonar o repositório.
+- **IDE**: Um editor de código como **VS Code** (com as extensões Flutter e Dart) ou **Android Studio**.
+- **Conta Firebase**: Você precisará de uma conta Google para criar e gerenciar o projeto no Firebase.
+- **Conta Google Cloud**: Associada à sua conta Firebase para habilitar as APIs do Google Maps.
+- **Ambiente de Plataforma Específico**:
+  - **Android**: Android Studio instalado para o SDK do Android e gerenciamento de emuladores/dispositivos.
+  - **iOS (Opcional)**: macOS com Xcode instalado para construir e rodar em simuladores ou dispositivos iOS.
+
+----
+
+### ⚙️ Configuração do Ambiente
+
+**1. Clonar o Repositório**
+
+```bash
+git clone <URL_DO_SEU_REPOSITORIO>
+cd <NOME_DA_PASTA_DO_PROJETO>
+```
+**2. Instalar Dependências Flutter**
+
+```dart
+flutter pub get
+```
 ---
 
 ### 1.3. Mockup  
