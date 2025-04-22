@@ -4,6 +4,7 @@ import 'package:friends_run/core/providers/auth_provider.dart';
 import 'package:friends_run/core/providers/metrics_provider.dart';
 import 'package:friends_run/core/utils/colors.dart';
 import 'package:friends_run/models/user/my_race_metrics.dart'; // Corrigido caminho se necessário
+import 'package:friends_run/views/estatistic/metrics_details_view.dart';
 import 'package:friends_run/views/home/widgets/empty_list_message.dart'; // Corrigido caminho se necessário
 import 'package:friends_run/views/home/widgets/races_error.dart';
 import 'package:friends_run/views/race/race_details/race_details_view.dart';
@@ -26,76 +27,109 @@ class UserStatsView extends ConsumerWidget {
           tooltip: 'Voltar',
           onPressed: () => Navigator.maybePop(context),
         ),
-        title: const Text('Minhas Estatísticas', style: TextStyle(color: AppColors.white)),
+        title: const Text(
+          'Minhas Estatísticas',
+          style: TextStyle(color: AppColors.white),
+        ),
         backgroundColor: AppColors.background,
         elevation: 0,
       ),
       body: metricsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primaryRed)),
+        loading:
+            () => const Center(
+              child: CircularProgressIndicator(color: AppColors.primaryRed),
+            ),
         error: (error, stackTrace) {
           print("Erro ao carregar métricas: $error\nStackTrace: $stackTrace");
-          return Center( /* ... Widget de erro como antes ... */ );
+          return Center(/* ... Widget de erro como antes ... */);
         },
-        data: (metricsListOriginal) { // Renomeado para clareza
+        data: (metricsListOriginal) {
+          // Renomeado para clareza
           if (userId.isEmpty) {
-            return Center( /* ... Mensagem de login ... */ );
+            return Center(/* ... Mensagem de login ... */);
           }
           if (metricsListOriginal.isEmpty) {
             return const EmptyListMessage(
-              message: 'Você ainda não registrou nenhuma corrida para exibir estatísticas.',
+              message:
+                  'Você ainda não registrou nenhuma corrida para exibir estatísticas.',
               icon: Icons.query_stats_rounded,
             );
           }
 
           // --- ORDENAÇÃO MANUAL DA LISTA POR DATA (MAIS RECENTE PRIMEIRO) ---
           // Cria uma cópia modificável e ordena
-          final List<MyRaceMetrics> metricsList = List.from(metricsListOriginal);
-          metricsList.sort((a, b) => b.raceDate.compareTo(a.raceDate)); // Descendente
+          final List<MyRaceMetrics> metricsList = List.from(
+            metricsListOriginal,
+          );
+          metricsList.sort(
+            (a, b) => b.raceDate.compareTo(a.raceDate),
+          ); // Descendente
 
           // --- Processamento e Cálculo das Estatísticas Agregadas ---
           // (A lógica de cálculo continua a mesma, mas usamos a lista original ou iteramos)
           final int totalRuns = metricsListOriginal.length;
-          final double totalDistanceMeters = metricsListOriginal.fold(0.0, (sum, m) => sum + m.distanceMeters);
-          final Duration totalDuration = metricsListOriginal.fold(Duration.zero, (sum, m) => sum + m.duration);
-          final int totalCalories = metricsListOriginal.fold(0, (sum, m) => sum + (m.caloriesBurned ?? 0));
+          final double totalDistanceMeters = metricsListOriginal.fold(
+            0.0,
+            (sum, m) => sum + m.distanceMeters,
+          );
+          final Duration totalDuration = metricsListOriginal.fold(
+            Duration.zero,
+            (sum, m) => sum + m.duration,
+          );
+          final int totalCalories = metricsListOriginal.fold(
+            0,
+            (sum, m) => sum + (m.caloriesBurned ?? 0),
+          );
 
           Duration overallAvgPace = Duration.zero;
           if (totalDistanceMeters > 0) {
             final double totalDistanceKm = totalDistanceMeters / 1000.0;
-            overallAvgPace = Duration(milliseconds: (totalDuration.inMilliseconds / totalDistanceKm).round());
+            overallAvgPace = Duration(
+              milliseconds:
+                  (totalDuration.inMilliseconds / totalDistanceKm).round(),
+            );
           }
 
           // Cálculo de recordes iterando (mais seguro que sort múltiplo)
           MyRaceMetrics? bestPaceRun;
-          Duration currentBestPace = const Duration(days: 999); // Valor inicial alto
+          Duration currentBestPace = const Duration(
+            days: 999,
+          ); // Valor inicial alto
           for (final metric in metricsListOriginal) {
-             // Considera apenas paces válidos (> 0)
-            if (metric.avgPacePerKm > Duration.zero && metric.avgPacePerKm < currentBestPace) {
-               currentBestPace = metric.avgPacePerKm;
-               bestPaceRun = metric;
+            // Considera apenas paces válidos (> 0)
+            if (metric.avgPacePerKm > Duration.zero &&
+                metric.avgPacePerKm < currentBestPace) {
+              currentBestPace = metric.avgPacePerKm;
+              bestPaceRun = metric;
             }
           }
-
 
           MyRaceMetrics? longestRun;
           double currentLongestDist = -1.0;
           for (final metric in metricsListOriginal) {
-             if (metric.distanceMeters > currentLongestDist) {
-                 currentLongestDist = metric.distanceMeters;
-                 longestRun = metric;
-             }
+            if (metric.distanceMeters > currentLongestDist) {
+              currentLongestDist = metric.distanceMeters;
+              longestRun = metric;
+            }
           }
-
 
           // Formatação para exibição (igual antes)
           final distanceFormatter = NumberFormat("#,##0.0", "pt_BR");
           final numberFormatter = NumberFormat("#,##0", "pt_BR");
-          final String formattedTotalDistance = "${distanceFormatter.format(totalDistanceMeters / 1000)} km";
+          final String formattedTotalDistance =
+              "${distanceFormatter.format(totalDistanceMeters / 1000)} km";
           final String formattedTotalDuration = _formatDuration(totalDuration);
           final String formattedOverallPace = _formatPace(overallAvgPace);
-          final String formattedTotalCalories = "${numberFormatter.format(totalCalories)} kcal";
-          final String formattedBestPace = bestPaceRun != null ? _formatPace(bestPaceRun.avgPacePerKm) : "--'--\"";
-          final String formattedLongestDistance = longestRun != null ? "${distanceFormatter.format(longestRun.distanceMeters / 1000)} km" : "- km";
+          final String formattedTotalCalories =
+              "${numberFormatter.format(totalCalories)} kcal";
+          final String formattedBestPace =
+              bestPaceRun != null
+                  ? _formatPace(bestPaceRun.avgPacePerKm)
+                  : "--'--\"";
+          final String formattedLongestDistance =
+              longestRun != null
+                  ? "${distanceFormatter.format(longestRun.distanceMeters / 1000)} km"
+                  : "- km";
 
           // --- Construção da UI (Dashboard) ---
           return SingleChildScrollView(
@@ -112,36 +146,90 @@ class UserStatsView extends ConsumerWidget {
                 const SizedBox(height: 24),
 
                 // --- Grid de Métricas Chave (igual antes) ---
-                Text('Recordes e Totais', style: TextStyle(color: AppColors.white.withAlpha(220), fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(
+                  'Recordes e Totais',
+                  style: TextStyle(
+                    color: AppColors.white.withAlpha(220),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 12),
                 GridView.count(
-                   crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-                   crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 1.8,
-                   children: [
-                     _buildStatCard(label: 'Maior Distância', value: formattedLongestDistance, icon: Icons.directions_run_rounded, iconColor: Colors.blueAccent, onTap: longestRun != null ? () => _navigateToRaceDetails(context, longestRun!.raceId) : null),
-                     _buildStatCard(label: 'Melhor Pace', value: formattedBestPace, icon: Icons.speed_rounded, iconColor: Colors.orangeAccent, onTap: bestPaceRun != null ? () => _navigateToRaceDetails(context, bestPaceRun!.raceId) : null),
-                     _buildStatCard(label: 'Tempo Total', value: formattedTotalDuration, icon: Icons.timer_outlined, iconColor: Colors.purpleAccent),
-                     _buildStatCard(label: 'Calorias Totais', value: formattedTotalCalories, icon: Icons.local_fire_department_outlined, iconColor: Colors.redAccent),
-                   ],
+                  crossAxisCount: 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: 1.8,
+                  children: [
+                    _buildStatCard(
+                      label: 'Maior Distância',
+                      value: formattedLongestDistance,
+                      icon: Icons.directions_run_rounded,
+                      iconColor: Colors.blueAccent,
+                      onTap:
+                          longestRun != null
+                              ? () => _navigateToMetricsDetails(
+                                context,
+                                longestRun!,
+                              )
+                              : null,
+                    ),
+                    _buildStatCard(
+                      label: 'Melhor Pace',
+                      value: formattedBestPace,
+                      icon: Icons.speed_rounded,
+                      iconColor: Colors.orangeAccent,
+                      onTap:
+                          bestPaceRun != null
+                              ? () => _navigateToMetricsDetails(
+                                context,
+                                bestPaceRun!,
+                              )
+                              : null,
+                    ),
+                    _buildStatCard(
+                      label: 'Tempo Total',
+                      value: formattedTotalDuration,
+                      icon: Icons.timer_outlined,
+                      iconColor: Colors.purpleAccent,
+                    ),
+                    _buildStatCard(
+                      label: 'Calorias Totais',
+                      value: formattedTotalCalories,
+                      icon: Icons.local_fire_department_outlined,
+                      iconColor: Colors.redAccent,
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 24),
 
                 // --- Seção de Últimas Corridas (MODIFICADO) ---
                 Text(
                   'Últimas Corridas', // <-- Título alterado
-                  style: TextStyle(color: AppColors.white.withAlpha(220), fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: AppColors.white.withAlpha(220),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 // Usa Column e map para criar a lista de widgets
                 // Usa a lista JÁ ORDENADA (metricsList)
                 Column(
-                  children: metricsList.map((metric) { // <-- Itera sobre a lista ordenada
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 8.0), // Espaçamento entre os cards
-                      // Reutiliza o mesmo widget de resumo da última corrida
-                      child: _buildLastRunSummary(context, metric),
-                    );
-                  }).toList(), // Converte o resultado do map em uma lista de Widgets
+                  children:
+                      metricsList.map((metric) {
+                        // <-- Itera sobre a lista ordenada
+                        return Padding(
+                          padding: const EdgeInsets.only(
+                            bottom: 8.0,
+                          ), // Espaçamento entre os cards
+                          // Reutiliza o mesmo widget de resumo da última corrida
+                          child: _buildLastRunSummary(context, metric, onTap: () => _navigateToMetricsDetails(context, metric)),
+
+                        );
+                      }).toList(), // Converte o resultado do map em uma lista de Widgets
                 ),
                 // --- Fim da Modificação ---
               ],
@@ -257,10 +345,7 @@ class UserStatsView extends ConsumerWidget {
   }
 
   // Exemplo de como mostrar um resumo da última corrida
-  Widget _buildLastRunSummary(BuildContext context, MyRaceMetrics lastRun) {
-    // Tenta buscar o nome da corrida (pode precisar de um provider para isso)
-    // final raceAsync = ref.watch(raceDetailsProvider(lastRun.raceId)); // Exemplo
-
+  Widget _buildLastRunSummary(BuildContext context, MyRaceMetrics runMetric, {VoidCallback? onTap}) {
     return Card(
       color: AppColors.white.withAlpha(20),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -270,30 +355,40 @@ class UserStatsView extends ConsumerWidget {
           horizontal: 16.0,
         ),
         leading: Icon(
-          Icons.directions_run,
+          // Ícone pode variar se a corrida foi 'boa' ou 'ruim'? Exemplo:
+          runMetric.avgPacePerKm < const Duration(minutes: 5)
+              ? Icons
+                  .local_fire_department // Foguinho para rápido
+              : Icons.directions_run, // Normal
           color: AppColors.primaryRed,
           size: 30,
         ),
+        // --- MODIFICADO ---
         title: Text(
-          '${lastRun.formattedDistance} em ${lastRun.formattedDuration}', // Exibe Distancia e Duração
+          runMetric.raceTitle, // <<< Título da Corrida aqui
           style: const TextStyle(
             color: AppColors.white,
             fontWeight: FontWeight.bold,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         subtitle: Text(
-          'Pace: ${lastRun.formattedPace} • ${DateFormat('dd/MM/yy').format(lastRun.raceDate)}', // Exibe Pace e Data
-          style: TextStyle(color: AppColors.white.withAlpha(180)),
+          // Mover Distância, Duração, Pace e Data para o subtítulo
+          '${runMetric.formattedDistance} em ${runMetric.formattedDuration} • Pace: ${runMetric.formattedPace}\n${DateFormat('dd/MM/yyyy').format(runMetric.raceDate)}', // Adiciona data em nova linha
+          style: TextStyle(
+            color: AppColors.white.withAlpha(180),
+            height: 1.3,
+          ), // Ajusta altura da linha
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
+        // --- FIM DA MODIFICAÇÃO ---
         trailing: Icon(
           Icons.chevron_right,
           color: AppColors.white.withAlpha(150),
         ),
-        onTap:
-            () => _navigateToRaceDetails(
-              context,
-              lastRun.raceId,
-            ), // Navega para detalhes da corrida
+        onTap: onTap,
       ),
     );
   }
@@ -306,6 +401,14 @@ class UserStatsView extends ConsumerWidget {
       context,
       MaterialPageRoute(builder: (_) => RaceDetailsView(raceId: raceId)),
     );
+  }
+
+  // ADICIONAR o novo método de navegação
+  void _navigateToMetricsDetails(BuildContext context, MyRaceMetrics metric) {
+     Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => MetricsDetailsView(initialMetrics: metric)),
+     );
   }
 
   // Funções auxiliares de formatação (podem ir para um arquivo utils)
