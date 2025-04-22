@@ -7,6 +7,7 @@ class MyRaceMetrics {
   final String id; // Document ID from Firestore
   final String userId;
   final String raceId;
+  final String raceTitle;
   final DateTime? userStartTime; // Quando o usuário realmente começou
   final DateTime userEndTime;   // Quando o usuário realmente terminou
   final Duration duration;      // Duração calculada (endTime - startTime)
@@ -26,6 +27,7 @@ class MyRaceMetrics {
     required this.id,
     required this.userId,
     required this.raceId,
+    required this.raceTitle,
     this.userStartTime,
     required this.userEndTime,
     required this.duration,
@@ -91,15 +93,14 @@ class MyRaceMetrics {
      }
 
     return MyRaceMetrics(
-      id: docId, // Usa o ID do documento passado
+      id: docId,
       userId: json['userId'] as String? ?? '',
       raceId: json['raceId'] as String? ?? '',
+      raceTitle: json['raceTitle'] as String? ?? 'Corrida sem título', // <<< Ler do JSON
       userStartTime: parseNullableDateTime(json['userStartTime']),
       userEndTime: parseRequiredDateTime(json['userEndTime']),
-      // Converte milissegundos de volta para Duration
       duration: Duration(milliseconds: json['durationMillis'] as int? ?? 0),
       distanceMeters: (json['distanceMeters'] as num?)?.toDouble() ?? 0.0,
-      // Converte milissegundos/km de volta para Duration
       avgPacePerKm: Duration(milliseconds: json['avgPaceMillisPerKm'] as int? ?? 0),
       avgSpeedKmh: (json['avgSpeedKmh'] as num?)?.toDouble() ?? 0.0,
       maxSpeedKmh: (json['maxSpeedKmh'] as num?)?.toDouble(),
@@ -115,16 +116,13 @@ class MyRaceMetrics {
 
   Map<String, dynamic> toJson() {
     return {
-      // id não é incluído aqui, pois é o ID do documento
       'userId': userId,
       'raceId': raceId,
-      // Converte DateTime? para Timestamp?
+      'raceTitle': raceTitle, // <<< Adicionar ao JSON para salvar
       'userStartTime': userStartTime != null ? Timestamp.fromDate(userStartTime!) : null,
       'userEndTime': Timestamp.fromDate(userEndTime),
-      // Converte Duration para milissegundos (int)
       'durationMillis': duration.inMilliseconds,
       'distanceMeters': distanceMeters,
-      // Converte Duration Pace para milissegundos/km (int)
       'avgPaceMillisPerKm': avgPacePerKm.inMilliseconds,
       'avgSpeedKmh': avgSpeedKmh,
       'maxSpeedKmh': maxSpeedKmh,
@@ -144,6 +142,7 @@ class MyRaceMetrics {
     String? id,
     String? userId,
     String? raceId,
+    String? raceTitle,
     DateTime? userStartTime,
     DateTime? userEndTime,
     Duration? duration,
@@ -163,6 +162,7 @@ class MyRaceMetrics {
       id: id ?? this.id,
       userId: userId ?? this.userId,
       raceId: raceId ?? this.raceId,
+      raceTitle: raceTitle ?? this.raceTitle,
       userStartTime: userStartTime ?? this.userStartTime,
       userEndTime: userEndTime ?? this.userEndTime,
       duration: duration ?? this.duration,
@@ -188,6 +188,7 @@ class MyRaceMetrics {
         other.id == id &&
         other.userId == userId &&
         other.raceId == raceId &&
+        other.raceTitle == raceTitle &&
         other.userStartTime == userStartTime &&
         other.userEndTime == userEndTime &&
         other.duration == duration &&
@@ -210,6 +211,7 @@ class MyRaceMetrics {
       id,
       userId,
       raceId,
+      raceTitle,
       userStartTime,
       userEndTime,
       duration,
