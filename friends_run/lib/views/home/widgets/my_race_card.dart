@@ -199,6 +199,7 @@ class _MyRaceCardState extends ConsumerState<MyRaceCard> {
       id: '',
       userId: userId,
       raceId: race.id,
+      raceTitle: race.title,
       userStartTime: startTime,
       userEndTime: endTime,
       duration: duration,
