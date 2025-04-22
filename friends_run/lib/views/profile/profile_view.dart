@@ -6,7 +6,7 @@ import 'package:friends_run/core/providers/auth_provider.dart';
 import 'package:friends_run/models/user/app_user.dart';
 import 'package:friends_run/core/utils/colors.dart'; // Supondo que AppColors existe aqui
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter/foundation.dart'; // Para debugPrint
+// Para debugPrint
 
 class ProfileView extends ConsumerStatefulWidget {
   const ProfileView({super.key});

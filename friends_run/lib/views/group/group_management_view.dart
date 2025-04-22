@@ -25,7 +25,7 @@ class GroupManagementView extends ConsumerWidget {
               (ctx) => AlertDialog(
                 title: const Text("Remover Membro"),
                 content: Text(
-                  "Tem certeza que deseja remover ${memberName} do grupo?",
+                  "Tem certeza que deseja remover $memberName do grupo?",
                 ),
                 actions: [
                   TextButton(
@@ -114,13 +114,14 @@ class GroupManagementView extends ConsumerWidget {
               ),
             ),
         data: (group) {
-          if (group == null)
+          if (group == null) {
             return const Center(
               child: Text(
                 "Grupo não encontrado.",
                 style: TextStyle(color: AppColors.greyLight),
               ),
             );
+          }
 
           // Segurança extra: Verifica se quem abriu a tela é realmente o admin
           if (currentUserId == null || currentUserId != group.adminId) {
