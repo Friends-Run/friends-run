@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:friends_run/core/providers/auth_provider.dart';
 import 'package:friends_run/core/utils/colors.dart';
 import 'package:friends_run/views/auth/auth_main_view.dart';
+import 'package:friends_run/views/estatistic/user_stats_view.dart';
 import 'package:friends_run/views/group/groups_list_view.dart';
 import 'package:friends_run/views/home/home_view.dart';
 import 'package:friends_run/views/profile/my_races_view.dart';
@@ -161,7 +162,12 @@ class HomeDrawer extends ConsumerWidget {
                   title: 'Estatísticas',
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.pushNamed(context, '/stats');
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const UserStatsView(),
+                      ),
+                    );
                   },
                 ),
                 const Divider(color: AppColors.white),
