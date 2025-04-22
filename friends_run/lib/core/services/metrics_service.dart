@@ -20,7 +20,7 @@ class MetricsService {
               .collection(_collectionName)
               .where('userId', isEqualTo: userId)
               // Ordena pela cópia da data da corrida para eficiência
-              .orderBy('raceDate', descending: true)
+              //.orderBy('raceDate', descending: true)
               .get();
 
       // Mapeia os documentos para a lista de MyRaceMetrics
