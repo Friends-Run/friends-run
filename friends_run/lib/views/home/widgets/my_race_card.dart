@@ -382,6 +382,25 @@ class _MyRaceCardState extends ConsumerState<MyRaceCard> {
 
             // --- BOTÕES DE AÇÃO ---
             Padding(
+              padding: const EdgeInsets.symmetric(
+                vertical: 12.0,
+                horizontal: 16.0,
+              ), // Ajuste o padding se necessário
+              child: Center(
+                // Centraliza o botão que sobrar
+                child: _buildMiddleButton(
+                  // Chama o helper que decide o botão
+                  context: context,
+                  specificMetricAsync: specificMetricAsync,
+                  raceHasStarted: raceHasStarted,
+                  canPerformActions: canPerformActions,
+                  isActionLoading: isActionLoading,
+                  currentUserId: currentUserId,
+                ),
+              ),
+            ),
+            /*
+            Padding(
               padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -434,6 +453,7 @@ class _MyRaceCardState extends ConsumerState<MyRaceCard> {
                 ],
               ),
             ),
+            */
           ],
         ),
       ),
